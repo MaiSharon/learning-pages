@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Now in Android 架構解密 — 互動學習</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#FAFAF8;--bg-card:#FFFFFF;
+  --lav:#B8A9E8;--pink:#F2B8C6;--blue:#A8C8E8;--mint:#B8E8D0;
+  --txt:#2D2B3A;--txt2:#8E8A9E;--txt3:#C4C0D0;
+  --glass:rgba(255,255,255,0.6);--glass-b:rgba(255,255,255,0.3);
+  --sh:0 4px 24px rgba(0,0,0,0.04);--sh2:0 8px 32px rgba(0,0,0,0.08);
+  --r:20px;--rs:12px;--rxs:8px;
+  --ease:all .3s cubic-bezier(.4,0,.2,1);
+  --side:280px;--top:64px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans TC','Pretendard',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;overflow-x:hidden}
+h1,h2,h3,h4{font-family:'Pretendard','Noto Sans TC',sans-serif;font-weight:700;line-height:1.3}
+code,pre{font-family:'JetBrains Mono',monospace}
+a{color:var(--lav);text-decoration:none}
+button{cursor:pointer;font-family:inherit;border:none;background:none}
+
+/* Opening */
+.opening{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#f5f0ff 0%,#fff5f8 50%,#f0f7ff 100%);transition:opacity .8s ease}
+.opening.hide{opacity:0;pointer-events:none}
+.opening-box{text-align:center;max-width:520px;padding:60px 40px;animation:fadeUp .8s ease}
+.opening-box h1{font-size:2.4rem;background:linear-gradient(135deg,var(--lav),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+.opening-box .sub{font-size:1.1rem;color:var(--txt2);margin-bottom:32px;line-height:1.8}
+.btn-start{display:inline-block;padding:14px 48px;border-radius:50px;font-size:1rem;font-weight:600;color:#fff;
+  background:linear-gradient(135deg,var(--lav),var(--pink));box-shadow:0 4px 20px rgba(184,169,232,.4);transition:var(--ease)}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(184,169,232,.5)}
+
+/* Topbar */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--top);background:var(--glass);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--glass-b);z-index:100;display:flex;align-items:center;padding:0 24px;gap:16px}
+.topbar .logo{font-weight:700;font-size:1rem;white-space:nowrap;background:linear-gradient(135deg,var(--lav),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.progress-wrap{flex:1;max-width:300px;height:8px;background:#eee;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--lav),var(--pink));border-radius:4px;transition:width .5s ease}
+.xp-badge{display:flex;align-items:center;gap:6px;font-weight:600;font-size:.9rem;color:var(--lav);white-space:nowrap}
+.xp-badge .num{min-width:36px}
+.badge-row{display:flex;gap:4px}
+.badge-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;
+  background:#f0edf8;transition:var(--ease)}
+.badge-icon.earned{background:linear-gradient(135deg,var(--lav),var(--pink));box-shadow:0 2px 8px rgba(184,169,232,.3)}
+.hamburger{display:none;font-size:1.4rem;padding:4px}
+.streak-tag{font-size:.75rem;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,var(--mint),var(--blue));color:var(--txt);font-weight:500;white-space:nowrap}
+
+/* Sidebar */
+.sidebar{position:fixed;top:var(--top);left:0;bottom:0;width:var(--side);background:var(--glass);backdrop-filter:blur(12px);
+  border-right:1px solid var(--glass-b);padding:24px 16px;overflow-y:auto;z-index:90;transition:transform .3s ease}
+.sidebar h3{font-size:.75rem;text-transform:uppercase;letter-spacing:2px;color:var(--txt2);margin-bottom:12px}
+.side-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--rs);margin-bottom:4px;cursor:pointer;transition:var(--ease);font-size:.9rem}
+.side-item:hover{background:rgba(184,169,232,.08)}
+.side-item.active{background:rgba(184,169,232,.15);font-weight:600;color:var(--lav)}
+.side-item.completed{color:var(--mint)}
+.side-item.completed::after{content:'✓';margin-left:auto;color:var(--mint);font-weight:700}
+.side-item.locked{color:var(--txt3);cursor:not-allowed}
+.side-item.locked:hover{background:transparent}
+.side-item .lock{margin-left:auto;font-size:.8rem}
+.side-sep{height:1px;background:var(--glass-b);margin:16px 0}
+.side-stats{font-size:.8rem;color:var(--txt2);line-height:2}
+.side-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.side-badge{font-size:1.2rem;filter:grayscale(1) opacity(.3);transition:var(--ease)}
+.side-badge.earned{filter:none}
+
+/* Main */
+.main{margin-left:var(--side);margin-top:var(--top);min-height:calc(100vh - var(--top));padding:40px 48px 80px}
+
+/* Cards */
+.glass-card{background:var(--bg-card);border:1px solid var(--glass-b);border-radius:var(--r);box-shadow:var(--sh);padding:32px;margin-bottom:24px;transition:var(--ease)}
+.glass-card:hover{box-shadow:var(--sh2)}
+
+/* Part header */
+.part-hdr{margin-bottom:32px}
+.part-hdr .tag{display:inline-block;font-size:.75rem;font-weight:600;padding:4px 14px;border-radius:20px;margin-bottom:12px;
+  background:linear-gradient(135deg,var(--lav),var(--pink));color:#fff}
+.part-hdr h1{font-size:1.8rem;margin-bottom:8px}
+.part-hdr .desc{color:var(--txt2);font-size:1rem}
+
+/* Accordion */
+.accordion{border:1px solid #eee;border-radius:var(--rs);overflow:hidden;margin-bottom:12px}
+.acc-head{width:100%;text-align:left;padding:16px 20px;font-weight:600;font-size:.95rem;display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg-card);transition:var(--ease)}
+.acc-head:hover{background:#faf8ff}
+.acc-head .arrow{transition:transform .3s ease;font-size:.8rem}
+.acc-head.open .arrow{transform:rotate(180deg)}
+.acc-body{max-height:0;overflow:hidden;transition:max-height .4s ease;background:#fdfcff}
+.acc-body.open{max-height:2000px}
+.acc-inner{padding:0 20px 20px}
+
+/* Code — CRITICAL: white-space: pre-wrap + overflow-x: auto */
+.code-wrap{background:#1e1e2e;border-radius:var(--rs);padding:20px;margin:12px 0;overflow-x:auto;font-size:.85rem;line-height:1.6}
+.code-wrap code{color:#cdd6f4;white-space:pre-wrap;word-break:break-all}
+.hl-kw{color:#cba6f7}.hl-ty{color:#89b4fa}.hl-st{color:#a6e3a1}.hl-cm{color:#6c7086;font-style:italic}.hl-an{color:#f9e2af}.hl-fn{color:#89dceb}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:50px;font-size:.9rem;font-weight:500;transition:var(--ease)}
+.btn-pri{background:linear-gradient(135deg,var(--lav),var(--pink));color:#fff;box-shadow:0 4px 16px rgba(184,169,232,.3)}
+.btn-pri:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(184,169,232,.4)}
+.btn-pri:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-sec{background:#f5f3fa;color:var(--lav)}
+.btn-sec:hover{background:#ece8f6}
+.btn-ghost{color:var(--txt2);padding:8px 16px}
+.btn-ghost:hover{color:var(--txt);background:#f5f3fa}
+
+/* Quiz section */
+.quiz-box{background:linear-gradient(135deg,#faf8ff,#fff8fa);border:2px solid #ede8f8;border-radius:var(--r);padding:32px;margin:32px 0}
+.quiz-box h3{font-size:1.1rem;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.quiz-row{display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.quiz-tag{display:inline-block;padding:8px 16px;border-radius:var(--rxs);font-weight:600;font-size:.9rem;min-width:40px;text-align:center;
+  background:var(--bg-card);border:2px solid #e0dce8;cursor:pointer;transition:var(--ease);user-select:none}
+.quiz-tag.selected{border-color:var(--lav);background:#f5f0ff;color:var(--lav)}
+.quiz-tag.correct{border-color:var(--mint);background:#f0faf5;color:#2d8a5e}
+.quiz-tag.wrong{border-color:var(--pink);background:#fff5f8;color:#c44}
+.quiz-tag.matched{opacity:.6;cursor:default}
+.quiz-select{padding:8px 12px;border-radius:var(--rxs);border:2px solid #e0dce8;font-size:.85rem;font-family:inherit;background:var(--bg-card);min-width:200px}
+.quiz-opt{display:block;padding:12px 16px;border-radius:var(--rs);border:2px solid #e0dce8;margin-bottom:8px;cursor:pointer;transition:var(--ease)}
+.quiz-opt:hover{border-color:var(--lav);background:#faf8ff}
+.quiz-opt.selected{border-color:var(--lav);background:#f5f0ff}
+.quiz-opt.correct{border-color:var(--mint);background:#f0faf5}
+.quiz-opt.wrong{border-color:var(--pink);background:#fff5f8}
+.quiz-result{margin-top:16px;padding:16px;border-radius:var(--rs);font-weight:500}
+.quiz-result.pass{background:#f0faf5;color:#2d8a5e}
+.quiz-result.fail{background:#fff5f8;color:#c44}
+
+/* Sorting quiz */
+.sort-item{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg-card);border:1px solid #eee;border-radius:var(--rxs);margin-bottom:6px}
+.sort-item .num{width:24px;height:24px;border-radius:50%;background:var(--lav);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+.sort-item .text{flex:1;font-size:.85rem}
+.sort-btn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.7rem;background:#f5f3fa;color:var(--txt2);transition:var(--ease)}
+.sort-btn:hover{background:var(--lav);color:#fff}
+
+/* TF quiz */
+.tf-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--bg-card);border:1px solid #eee;border-radius:var(--rs);margin-bottom:8px}
+.tf-code{flex:1;font-size:.85rem;font-family:'JetBrains Mono',monospace;color:var(--txt)}
+.tf-btns{display:flex;gap:6px;flex-shrink:0}
+.tf-btn{padding:6px 14px;border-radius:20px;font-size:.8rem;font-weight:600;border:2px solid #eee;transition:var(--ease)}
+.tf-btn:hover{border-color:var(--lav)}
+.tf-btn.sel-t{border-color:var(--mint);background:#f0faf5;color:#2d8a5e}
+.tf-btn.sel-f{border-color:var(--pink);background:#fff5f8;color:#c44}
+
+/* Code editor */
+.code-editor{width:100%;min-height:200px;background:#1e1e2e;color:#cdd6f4;border:2px solid #313244;border-radius:var(--rs);
+  padding:20px;font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.6;resize:vertical;tab-size:4}
+.code-editor:focus{outline:none;border-color:var(--lav)}
+
+/* Briefing card */
+.brief-card{background:linear-gradient(135deg,#faf8ff,#f8f5ff);border:1px solid #e8e0f8;border-radius:var(--r);padding:28px 32px;margin:24px 0}
+.brief-card h3{font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.brief-point{padding:8px 0;font-size:.9rem;display:flex;gap:8px}
+.brief-point .pin{flex-shrink:0}
+.brief-qa{margin-top:16px;padding:16px;background:rgba(184,169,232,.08);border-radius:var(--rs);font-size:.9rem}
+.brief-qa .q{font-weight:600;margin-bottom:8px}
+
+/* Insight */
+.insight-block{border:1px dashed var(--lav);border-radius:var(--rs);margin:16px 0;overflow:hidden}
+.insight-head{width:100%;text-align:left;padding:14px 20px;font-size:.9rem;font-weight:500;color:var(--lav);display:flex;justify-content:space-between;align-items:center;transition:var(--ease)}
+.insight-head:hover{background:rgba(184,169,232,.05)}
+.insight-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.insight-body.open{max-height:500px}
+.insight-inner{padding:0 20px 16px;font-size:.9rem;color:var(--txt2);line-height:1.8}
+.insight-xp{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:10px;background:var(--mint);color:#fff;font-weight:600}
+
+/* Dependency animation */
+.dep-diagram{display:flex;justify-content:center;align-items:center;gap:0;margin:24px 0;flex-wrap:wrap}
+.dep-layer{padding:16px 24px;border-radius:var(--rs);font-weight:600;font-size:.85rem;text-align:center;min-width:140px;position:relative}
+.dep-arrow{font-size:1.4rem;color:var(--lav);animation:pulse 2s infinite;margin:0 4px}
+@keyframes arrowFlow{0%,100%{opacity:.3}50%{opacity:1}}
+.dep-outer{background:#fce4ec;color:#c62828;border:2px solid #ef9a9a}
+.dep-mid{background:#e3f2fd;color:#1565c0;border:2px solid #90caf9}
+.dep-inner{background:#e8f5e9;color:#2e7d32;border:2px solid #a5d6a7}
+
+/* Layer toggle */
+.toggle-wrap{display:flex;justify-content:center;margin:20px 0}
+.toggle-sw{display:flex;background:#f0edf8;border-radius:50px;padding:4px}
+.toggle-opt{padding:8px 24px;border-radius:50px;font-size:.85rem;font-weight:500;cursor:pointer;transition:var(--ease)}
+.toggle-opt.active{background:var(--lav);color:#fff}
+
+/* Comparison table */
+.cmp-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:var(--rs);overflow:hidden;margin:16px 0;font-size:.85rem}
+.cmp-table th{background:#f5f3fa;padding:12px 16px;text-align:left;font-weight:600;border-bottom:2px solid #e8e0f8}
+.cmp-table td{padding:10px 16px;border-bottom:1px solid #f0edf8}
+.cmp-table tr:hover td{background:#faf8ff}
+.cmp-hl{background:rgba(184,169,232,.1)!important}
+
+/* Toast notification */
+.toast-wrap{position:fixed;top:80px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{padding:14px 24px;border-radius:var(--rs);background:var(--bg-card);box-shadow:var(--sh2);display:flex;align-items:center;gap:10px;
+  font-size:.9rem;font-weight:500;animation:slideIn .4s ease;min-width:240px}
+.toast.xp{border-left:4px solid var(--lav)}
+.toast.badge-t{border-left:4px solid var(--mint)}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadeUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+/* Feynman */
+.feynman-q{margin-bottom:20px}
+.feynman-q label{display:block;font-weight:600;font-size:.95rem;margin-bottom:8px}
+.feynman-ta{width:100%;min-height:80px;border:2px solid #e0dce8;border-radius:var(--rs);padding:14px;font-family:inherit;font-size:.9rem;resize:vertical;line-height:1.6}
+.feynman-ta:focus{outline:none;border-color:var(--lav)}
+.feynman-ref{margin-top:8px;padding:12px;background:#f5f3fa;border-radius:var(--rxs);font-size:.85rem;display:none}
+.feynman-ref.show{display:block}
+.rating{display:flex;gap:4px;margin-top:8px}
+.rating-star{font-size:1.2rem;cursor:pointer;color:#ddd;transition:var(--ease)}
+.rating-star.lit{color:#f9c74f}
+
+/* Read button */
+.read-done{text-align:center;margin:24px 0;padding:20px;border:2px dashed #e0dce8;border-radius:var(--rs)}
+.read-done.done{border-color:var(--mint);background:#f0faf5}
+
+/* Radar chart */
+.radar-section{background:var(--bg-card);border-radius:var(--r);box-shadow:var(--sh);padding:40px;margin-top:40px;text-align:center}
+.radar-section h2{margin-bottom:24px;font-size:1.2rem}
+
+/* Footer summary */
+.footer-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:24px}
+.foot-stat{padding:20px;background:#f5f3fa;border-radius:var(--rs);text-align:center}
+.foot-stat .val{font-size:2rem;font-weight:700;background:linear-gradient(135deg,var(--lav),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.foot-stat .label{font-size:.8rem;color:var(--txt2);margin-top:4px}
+
+/* Step cards */
+.step-card{padding:20px;background:var(--bg-card);border:1px solid #eee;border-radius:var(--rs);margin-bottom:12px;transition:var(--ease)}
+.step-card.active{border-color:var(--lav);box-shadow:0 0 0 3px rgba(184,169,232,.15)}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--lav);color:#fff;font-size:.8rem;font-weight:700;margin-right:8px}
+.step-file{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--lav);margin:6px 0}
+.step-nav{display:flex;gap:8px;justify-content:center;margin:16px 0}
+
+/* Responsive */
+@media(max-width:768px){
+  .hamburger{display:block}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:none}
+  .main{margin-left:0;padding:24px 16px 60px}
+  .topbar{padding:0 12px}
+  .quiz-row{flex-direction:column}
+  .dep-diagram{flex-direction:column;gap:8px}
+  .dep-arrow{transform:rotate(90deg)}
+  .opening-box{padding:40px 24px}
+  .opening-box h1{font-size:1.8rem}
+  .cmp-table{font-size:.75rem}
+  .cmp-table th,.cmp-table td{padding:8px 10px}
+}
+.rating-star.lit{color:#f9c74f}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     OPENING SCREEN
+     ============================================================ -->
+<div class="opening" id="opening">
+  <div class="opening-box">
+    <div style="font-size:3rem;margin-bottom:16px">🏗️</div>
+    <h1>NIA 架構解密</h1>
+    <p class="sub">Google 官方 Android 參考應用的架構設計指南<br>從第一性原理出發，理解每一個設計決策背後的「為什麼」<br>7 個章節 · 多種互動測驗 · 模擬實作</p>
+    <button class="btn-start" onclick="startJourney()">開始旅程</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     TOPBAR / SIDEBAR / MAIN
+     ============================================================ -->
+<header class="topbar" id="topbar">
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="logo">🏗 NIA 架構解密</div>
+  <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="xp-badge">⚡ <span class="num" id="xp-num">0</span> XP</div>
+  <div class="streak-tag" id="streak-tag" style="display:none"></div>
+  <div class="badge-row" id="badge-row"></div>
+</header>
+
+<nav class="sidebar" id="sidebar"></nav>
+<main class="main" id="main-content"></main>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const DEFAULT_STATE = {
+  currentPart:1, xp:0, completedParts:[], unlockedParts:[1], badges:[],
+  expandedInsights:[], readParts:[], streak:0, lastDate:null,
+  openingDone:false, briefingsRead:[],
+  part1Matches: {},
+  part2Order: [6,3,0,5,1,4,2],
+  part3Answers: [null,null,null,null,null],
+  part4Answers: [null,null,null,null,null],
+  part5Answers: ['','',''], part5Ratings: [0,0,0],
+  part6Code1: '', part6Code2: '', part6Code3: '', part6Step: 0,
+  part7Answers: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null], part7Submitted: false
+};
+let S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+function load(){
+  try{ const d=localStorage.getItem('nia-arch-learn'); if(d){const p=JSON.parse(d);Object.assign(S,p)} }catch(e){}
+}
+function save(){ localStorage.setItem('nia-arch-learn',JSON.stringify(S)) }
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const PARTS = [
+  {id:1,title:'NIA 全貌與學習地圖',icon:'🗺️',xpRead:50,xpQuiz:50},
+  {id:2,title:'三層架構',icon:'🧱',xpRead:75,xpQuiz:75},
+  {id:3,title:'模組化設計',icon:'📦',xpRead:75,xpQuiz:75},
+  {id:4,title:'數據流與離線優先',icon:'🌊',xpRead:75,xpQuiz:75},
+  {id:5,title:'依賴注入與測試策略',icon:'💉',xpRead:75,xpQuiz:75},
+  {id:6,title:'模擬功能實作',icon:'🔨',xpRead:50,xpQuiz:150},
+  {id:7,title:'綜合驗證',icon:'🎯',xpRead:0,xpQuiz:200}
+];
+const BADGES = [
+  {id:'explorer',name:'架構探險家',icon:'🗺️',req:[1]},
+  {id:'layered',name:'分層大師',icon:'🧱',req:[2]},
+  {id:'modular',name:'模組達人',icon:'📦',req:[3]},
+  {id:'offline',name:'離線先鋒',icon:'🌊',req:[4]},
+  {id:'testable',name:'測試守門人',icon:'🧪',req:[5]},
+  {id:'builder',name:'實作工程師',icon:'🔨',req:[6]},
+  {id:'architect',name:'首席架構師',icon:'👑',req:[1,2,3,4,5,6,7]}
+];
+const TOTAL_XP = 1750;
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function hl(code){
+  let c = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return c.replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*")|(@\w+)|(\b(?:fun|val|var|class|interface|sealed|suspend|override|private|abstract|object|data|return|if|else|when|is|in|for|while|try|catch|throw|import|package|operator|by|get|set|this|super|null|true|false|internal|open|lateinit)\b)|(\b(?:Flow|StateFlow|MutableStateFlow|MutableSharedFlow|ViewModel|Repository|Context|String|Int|Boolean|List|Map|Set|Unit|Result|Bundle|Activity|Composable|Modifier|LazyColumn|Column|Row|Box|Text|Button|TopicEntity|NewsResource|NewsResourceEntity|Topic|NiaDatabase|TopicDao|Plugin|Project|Synchronizer|CoroutineWorker|WorkerParameters|SavedStateHandle|SingletonComponent|ApplicationContext|Singleton|Module|InstallIn|Provides|Binds|HiltViewModel|Inject|AssistedInject|Assisted|UserNewsResource|BookmarkedNews|BookmarksRepository|BookmarksUiState|BookmarksViewModel|SharingStarted|Notifier|ChangeListVersions|NetworkTopic)\b)/gm,
+    (m,cm,st,an,kw,ty)=>{
+      if(cm)return'<span class="hl-cm">'+cm+'</span>';if(st)return'<span class="hl-st">'+st+'</span>';
+      if(an)return'<span class="hl-an">'+an+'</span>';if(kw)return'<span class="hl-kw">'+kw+'</span>';
+      if(ty)return'<span class="hl-ty">'+ty+'</span>';return m;
+    });
+}
+function codeBlock(code){ return '<div class="code-wrap"><code>'+hl(code)+'</code></div>' }
+function escapeHtmlAttr(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function updateStreak(){
+  const today=new Date().toISOString().split('T')[0];
+  if(S.lastDate===today)return;
+  const y=new Date(Date.now()-864e5).toISOString().split('T')[0];
+  S.streak = S.lastDate===y ? S.streak+1 : 1;
+  S.lastDate=today; save();
+}
+function showToast(text,type='xp'){
+  const w=document.getElementById('toast-wrap');
+  const t=document.createElement('div');t.className='toast '+type;t.textContent=text;
+  w.appendChild(t);setTimeout(()=>t.remove(),3000);
+}
+
+// ============================================================
+// GAMIFICATION
+// ============================================================
+function addXP(amount,msg){
+  S.xp=Math.min(S.xp+amount,TOTAL_XP);save();
+  showToast('+'+ amount+' XP — '+msg,'xp');
+  renderTopbar();
+}
+function checkBadges(){
+  BADGES.forEach(b=>{
+    if(S.badges.includes(b.id))return;
+    if(b.req.every(r=>S.completedParts.includes(r))){
+      S.badges.push(b.id);save();
+      showToast(b.icon+' 獲得徽章：'+b.name,'badge-t');
+    }
+  });
+  renderTopbar();renderSidebar();
+}
+function markRead(partId){
+  if(S.readParts.includes(partId))return;
+  const p=PARTS.find(x=>x.id===partId);
+  S.readParts.push(partId);save();
+  if(p.xpRead>0)addXP(p.xpRead,'完成 Part '+partId+' 閱讀');
+  render();
+}
+function completePart(partId){
+  if(S.completedParts.includes(partId))return;
+  const p=PARTS.find(x=>x.id===partId);
+  S.completedParts.push(partId);
+  const next=partId+1;
+  if(next<=PARTS.length&&!S.unlockedParts.includes(next))S.unlockedParts.push(next);
+  save();
+  if(p.xpQuiz>0)addXP(p.xpQuiz,'通過 Part '+partId+' 測驗');
+  checkBadges();render();
+}
+function expandInsight(id){
+  const body=document.getElementById('insight-body-'+id);
+  if(!body)return;
+  body.classList.toggle('open');
+  if(body.classList.contains('open')&&!S.expandedInsights.includes(id)){
+    S.expandedInsights.push(id);save();addXP(25,'展開深入了解');
+  }
+}
+function markBriefingRead(partId){
+  if(!S.briefingsRead.includes(partId)){S.briefingsRead.push(partId);save();}
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function render(){renderTopbar();renderSidebar();renderMain();}
+
+function renderTopbar(){
+  const pct=Math.round(S.completedParts.length/PARTS.length*100);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('xp-num').textContent=S.xp;
+  const br=document.getElementById('badge-row');
+  br.innerHTML=BADGES.map(b=>'<div class="badge-icon'+(S.badges.includes(b.id)?' earned':'')+'" title="'+b.name+'">'+b.icon+'</div>').join('');
+  const st=document.getElementById('streak-tag');
+  if(S.streak>0){st.style.display='';st.textContent='🔥 連續 '+S.streak+' 天';}
+}
+
+function renderSidebar(){
+  const sb=document.getElementById('sidebar');
+  sb.innerHTML='<h3>章節</h3>'+PARTS.map(p=>{
+    const locked=!S.unlockedParts.includes(p.id);
+    const done=S.completedParts.includes(p.id);
+    const active=S.currentPart===p.id;
+    let cls='side-item';if(active)cls+=' active';if(done)cls+=' completed';if(locked)cls+=' locked';
+    return '<div class="'+cls+'" onclick="'+(locked?'':'navigateTo('+p.id+')')+'">'+
+      '<span>'+p.icon+'</span><span>Part '+p.id+'</span><span style="flex:1;font-size:.8rem;color:var(--txt2)">'+p.title+'</span>'+
+      (locked?'<span class="lock">🔒</span>':'')+'</div>';
+  }).join('')+'<div class="side-sep"></div><h3>成就</h3><div class="side-badges">'+
+  BADGES.map(b=>'<span class="side-badge'+(S.badges.includes(b.id)?' earned':'')+'" title="'+b.name+'">'+b.icon+'</span>').join('')+
+  '</div><div class="side-sep"></div><div class="side-stats">'+
+  '📊 進度：'+S.completedParts.length+' / '+PARTS.length+'<br>⚡ XP：'+S.xp+' / '+TOTAL_XP+
+  '<br>🏅 徽章：'+S.badges.length+' / '+BADGES.length+'</div>';
+}
+
+function renderMain(){
+  const c=document.getElementById('main-content');
+  const fns=[null, getPart1,getPart2,getPart3,getPart4,getPart5,getPart6,getPart7];
+  const fn=fns[S.currentPart];
+  c.innerHTML=fn?fn():'';
+  c.innerHTML+=getRadarHTML();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function navigateTo(id){
+  if(!S.unlockedParts.includes(id))return;
+  S.currentPart=id;save();render();
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+}
+function startJourney(){
+  S.openingDone=true;save();
+  document.getElementById('opening').classList.add('hide');
+  setTimeout(()=>document.getElementById('opening').style.display='none',800);
+}
+
+// ============================================================
+// SHARED UI HELPERS
+// ============================================================
+function insightBlock(id,text){
+  const opened=S.expandedInsights.includes(id);
+  return '<div class="insight-block"><button class="insight-head" onclick="expandInsight('+id+')">'+
+    '<span>★ 深入了解 '+(opened?'':'<span class="insight-xp">+25 XP</span>')+'</span><span>'+(opened?'▲':'▼')+'</span></button>'+
+    '<div class="insight-body'+(opened?' open':'')+'" id="insight-body-'+id+'"><div class="insight-inner">'+text+'</div></div></div>';
+}
+
+function briefCard(part,title,points,q,a){
+  return '<div class="brief-card" onclick="markBriefingRead('+part+')"><h3>💼 向主管簡報 — Part '+part+': '+title+'</h3>'+
+    points.map(p=>'<div class="brief-point"><span class="pin">📌</span><span>'+p+'</span></div>').join('')+
+    '<div class="brief-qa"><div class="q">💡 如果主管問：「'+q+'」</div><div>你可以回答：「'+a+'」</div></div></div>';
+}
+
+function toggleAcc(btn){
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open');
+}
+
+// ============================================================
+// RADAR CHART (Octalysis)
+// ============================================================
+function getRadarHTML(){
+  const drives=[
+    {name:'使命感',val:S.openingDone?1:0},
+    {name:'成就感',val:Math.min(S.xp/TOTAL_XP,1)},
+    {name:'創造力',val:S.completedParts.includes(PARTS.length-1)?1:0},
+    {name:'擁有感',val:S.badges.length/BADGES.length},
+    {name:'社交影響',val:S.briefingsRead.length/PARTS.length},
+    {name:'稀缺性',val:S.unlockedParts.length/PARTS.length},
+    {name:'好奇心',val:S.expandedInsights.length/Math.max(PARTS.length-1,1)},
+    {name:'避損心理',val:S.streak>0?Math.min(S.streak/7,1):0}
+  ];
+  const cx=150,cy=150,r=110;
+  let pts=[],labelHtml='';
+  drives.forEach((d,i)=>{
+    const angle=-Math.PI/2+i*Math.PI/4;
+    const x=cx+r*Math.cos(angle),y=cy+r*Math.sin(angle);
+    const vx=cx+r*d.val*Math.cos(angle),vy=cy+r*d.val*Math.sin(angle);
+    pts.push(vx+','+vy);
+    const lx=cx+(r+25)*Math.cos(angle),ly=cy+(r+25)*Math.sin(angle);
+    labelHtml+='<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#8E8A9E">'+d.name+'</text>';
+    labelHtml+='<line x1="'+cx+'" y1="'+cy+'" x2="'+x+'" y2="'+y+'" stroke="#e0dce8" stroke-width="1"/>';
+  });
+  let gridHtml='';
+  [0.25,0.5,0.75,1].forEach(s=>{
+    let gp=[];
+    for(let i=0;i<8;i++){const a=-Math.PI/2+i*Math.PI/4;gp.push((cx+r*s*Math.cos(a))+','+(cy+r*s*Math.sin(a)))}
+    gridHtml+='<polygon points="'+gp.join(' ')+'" fill="none" stroke="#e0dce8" stroke-width="0.5"/>';
+  });
+
+  return '<div class="radar-section"><h2>八角遊戲化框架（Octalysis）</h2>'+
+    '<svg viewBox="0 0 300 300" width="300" height="300" style="max-width:100%">'+gridHtml+labelHtml+
+    '<polygon points="'+pts.join(' ')+'" fill="rgba(184,169,232,0.2)" stroke="var(--lav)" stroke-width="2"/></svg>'+
+    '<div class="footer-summary">'+
+    '<div class="foot-stat"><div class="val">'+S.completedParts.length+'/'+PARTS.length+'</div><div class="label">完成章節</div></div>'+
+    '<div class="foot-stat"><div class="val">'+S.xp+'</div><div class="label">總 XP</div></div>'+
+    '<div class="foot-stat"><div class="val">'+S.badges.length+'</div><div class="label">徽章</div></div>'+
+    '<div class="foot-stat"><div class="val">'+Math.round(S.completedParts.length/PARTS.length*100)+'%</div><div class="label">完成率</div></div>'+
+    '</div></div>';
+}
+
+// ============================================================
+// PART CONTENT FUNCTIONS (generated by Agent Team)
+// ============================================================
+// ============================================================
+// Part 1: NIA 全貌與學習地圖
+// ============================================================
+function getPart1() {
+  const done = S.completedParts.includes(1);
+  const read = S.readParts.includes(1);
+  let h = '<div class="part-hdr"><span class="tag">Part 1</span><h1>\uD83D\uDDFA\uFE0F NIA 全貌與學習地圖</h1><p class="desc">從混沌到秩序 — 第一性原理：為什麼需要架構？</p></div>';
+
+  // --- 反例 accordion: God Activity ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\u274C 反例：God Activity（所有邏輯混在一起）</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>當所有邏輯都擠在一個 Activity 裡，UI、網路、資料庫全部混在一起，結果就是一個無法維護的巨大檔案：</p>';
+  h += codeBlock(
+    '// GodActivity.kt — \u2620\uFE0F 反面教材\n' +
+    'class GodActivity : AppCompatActivity() {\n' +
+    '    private val db = Room.databaseBuilder(...).build()\n' +
+    '    private val api = Retrofit.Builder().baseUrl("https://api.example.com").build()\n' +
+    '        .create(ApiService::class.java)\n\n' +
+    '    override fun onCreate(savedInstanceState: Bundle?) {\n' +
+    '        super.onCreate(savedInstanceState)\n' +
+    '        // UI \u904F\u8F2F\u76F4\u63A5\u5BEB\u5728\u9019\u88E1\n' +
+    '        val recyclerView = findViewById<RecyclerView>(R.id.list)\n\n' +
+    '        // \u7DB2\u8DEF\u547C\u53EB\u4E5F\u5728\u9019\u88E1\n' +
+    '        lifecycleScope.launch {\n' +
+    '            try {\n' +
+    '                val news = api.getNews()\n' +
+    '                // \u8CC7\u6599\u5EAB\u64CD\u4F5C\u4E5F\u5728\u9019\u88E1\n' +
+    '                db.newsDao().insertAll(news)\n' +
+    '                // UI \u66F4\u65B0\u4E5F\u5728\u9019\u88E1\n' +
+    '                recyclerView.adapter = NewsAdapter(news)\n' +
+    '            } catch (e: Exception) {\n' +
+    '                Toast.makeText(this@GodActivity, e.message, Toast.LENGTH_LONG).show()\n' +
+    '            }\n' +
+    '        }\n' +
+    '    }\n' +
+    '    // ... \u9084\u6709 500+ \u884C\u985E\u4F3C\u7684\u7A0B\u5F0F\u78BC\n' +
+    '}'
+  );
+  h += '<p><strong>\u554F\u984C\uFF1A</strong>\u7121\u6CD5\u6E2C\u8A66\u3001\u7121\u6CD5\u91CD\u7528\u3001\u4E00\u500B\u6539\u52D5\u5F71\u97FF\u5168\u90E8\u3001\u591A\u4EBA\u5354\u4F5C\u5FC5\u5B9A\u885D\u7A81\u3002</p>';
+  h += '</div></div></div>';
+
+  // --- 正例 accordion: NIA 分層架構 ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\u2705 \u6B63\u4F8B\uFF1ANIA \u5206\u5C64\u67B6\u69CB\uFF08\u5404\u5C64\u8077\u8CAC\u6E05\u6670\uFF09</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>NIA \u5C07\u61C9\u7528\u7A0B\u5F0F\u5206\u6210\u4E09\u5C64\uFF0C\u6BCF\u5C64\u5404\u53F8\u5176\u8077\uFF1A</p>';
+  h += '<ul><li><strong>UI Layer</strong>\uFF1ACompose + ViewModel\uFF0C\u8CA0\u8CAC\u986F\u793A\u548C\u4F7F\u7528\u8005\u4E92\u52D5</li>';
+  h += '<li><strong>Domain Layer</strong>\uFF1AUseCase\uFF08\u53EF\u9078\uFF09\uFF0C\u5C01\u88DD\u53EF\u91CD\u7528\u7684\u696D\u52D9\u908F\u8F2F</li>';
+  h += '<li><strong>Data Layer</strong>\uFF1ARepository + DataSource\uFF0C\u7BA1\u7406\u8CC7\u6599\u5B58\u53D6</li></ul>';
+  h += '<p>\u6BCF\u500B\u5C64\u53EA\u77E5\u9053\u4E0B\u4E00\u5C64\u7684\u4ECB\u9762\uFF0C\u4E0D\u77E5\u9053\u5176\u5BE6\u4F5C\u7D30\u7BC0\u3002</p>';
+  h += '</div></div></div>';
+
+  // --- NIA 技術棧簡介 ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\uD83D\uDEE0\uFE0F NIA \u6280\u8853\u68E7\u7C21\u4ECB</div><div class="acc-body"><div class="acc-inner">';
+  h += '<ul>';
+  h += '<li><strong>Jetpack Compose</strong>\uFF1A\u5BA3\u544A\u5F0F UI \u6846\u67B6\uFF0C\u53D6\u4EE3\u50B3\u7D71 XML Layout</li>';
+  h += '<li><strong>Kotlin Flow</strong>\uFF1A\u97FF\u61C9\u5F0F\u8CC7\u6599\u6D41\uFF0C\u9A45\u52D5 UI \u66F4\u65B0</li>';
+  h += '<li><strong>Hilt</strong>\uFF1A\u4F9D\u8CF4\u6CE8\u5165\u6846\u67B6\uFF0C\u7C21\u5316\u7269\u4EF6\u5EFA\u7ACB\u548C\u7BA1\u7406</li>';
+  h += '<li><strong>Room</strong>\uFF1A\u672C\u5730\u8CC7\u6599\u5EAB\uFF0C\u4F5C\u70BA Single Source of Truth</li>';
+  h += '<li><strong>DataStore</strong>\uFF1A\u5132\u5B58\u4F7F\u7528\u8005\u504F\u597D\u8A2D\u5B9A\uFF08\u53D6\u4EE3 SharedPreferences\uFF09</li>';
+  h += '<li><strong>WorkManager</strong>\uFF1A\u80CC\u666F\u4EFB\u52D9\u8655\u7406\uFF0C\u8CA0\u8CAC\u8CC7\u6599\u540C\u6B65</li>';
+  h += '</ul>';
+  h += '</div></div></div>';
+
+  // --- 架構全景圖 ---
+  h += '<div class="glass-card"><h3>\uD83C\uDFD7\uFE0F \u67B6\u69CB\u5168\u666F\u5716\uFF1A\u4F9D\u8CF4\u65B9\u5411</h3>';
+  h += '<div class="dep-diagram">';
+  h += '<div class="dep-outer"><div class="dep-layer">app \u6A21\u7D44</div><div class="dep-arrow">\u2193 \u4F9D\u8CF4</div>';
+  h += '<div class="dep-mid"><div class="dep-layer">feature:foryou &nbsp; feature:bookmarks &nbsp; feature:interests</div><div class="dep-arrow">\u2193 \u4F9D\u8CF4</div>';
+  h += '<div class="dep-inner"><div class="dep-layer">core:data &nbsp; core:model &nbsp; core:network &nbsp; core:ui &nbsp; core:designsystem</div>';
+  h += '</div></div></div></div>';
+  h += '<p style="text-align:center;opacity:.7">\u4F9D\u8CF4\u53EA\u80FD\u5411\u4E0B\uFF0C\u7D55\u4E0D\u53CD\u5411</p></div>';
+
+  // --- Insight Blocks ---
+  h += insightBlock(1, '\u70BA\u4EC0\u9EBC Google \u8981\u505A NIA\uFF1F\u56E0\u70BA\u904E\u53BB\u7684\u7BC4\u4F8B App\uFF08\u5982 Sunflower\uFF09\u5DF2\u904E\u6642\uFF0C\u7121\u6CD5\u5C55\u793A\u73FE\u4EE3 Android \u958B\u767C\u7684\u5168\u8C8C\u3002NIA \u662F\u5B98\u65B9\u6700\u4F73\u5BE6\u8E10\u7684\u793A\u7BC4\u61C9\u7528\uFF0C\u6DB5\u84CB\u67B6\u69CB\u3001\u6E2C\u8A66\u3001CI/CD\u3001\u7121\u969C\u7919\u7B49\u65B9\u9762\u3002');
+  h += insightBlock(2, 'Convention over Configuration \u7406\u5FF5\uFF1ANIA \u900F\u904E Convention Plugin \u8B93\u6BCF\u500B\u6A21\u7D44\u4E0D\u7528\u91CD\u8907\u8A2D\u5B9A Gradle\uFF0C\u53EA\u8981\u5957\u7528\u5805\u5B9A\u597D\u7684\u6163\u4F8B\u5373\u53EF\u3002\u9019\u548C Rails \u7684\u300CCoC\u300D\u54F2\u5B78\u76F8\u540C\u3002');
+
+  // --- 閱讀完成按鈕 ---
+  h += '<div class="read-done' + (read ? ' done' : '') + '"><button class="btn ' + (read ? 'btn-sec' : 'btn-pri') + '" onclick="markRead(1)">' + (read ? '\u2713 \u5DF2\u95B1\u8B80' : '\uD83D\uDCD6 \u6A19\u8A18\u5DF2\u95B1\u8B80') + '</button></div>';
+
+  // --- 測驗：配對題 ---
+  h += '<div class="quiz-box' + (done ? ' done' : '') + '"><h3>\uD83E\uDDE9 \u914D\u5C0D\u984C\uFF1A\u554F\u984C \u2194 NIA \u89E3\u6CD5</h3>';
+  var q1problems = [
+    'Activity \u592A\u80A5\uFF0C\u96E3\u4EE5\u7DAD\u8B77',
+    '\u6A21\u7D44\u9593\u4E92\u76F8\u4F9D\u8CF4\u6210\u7FA9\u5927\u5229\u9EAB',
+    '\u96E2\u7DDA\u6642 App \u5B8C\u5168\u4E0D\u80FD\u7528',
+    '\u6E2C\u8A66\u9700\u8981\u771F\u5BE6 API \u592A\u6162',
+    '\u6BCF\u500B\u6A21\u7D44 build.gradle \u91CD\u8907\u8A2D\u5B9A'
+  ];
+  var q1answers = [
+    '\u4E09\u5C64\u67B6\u69CB\uFF08UI/Domain/Data\uFF09',
+    '\u56B4\u683C\u7684\u6A21\u7D44\u4F9D\u8CF4\u65B9\u5411',
+    'Offline-first + Room \u4F5C SSOT',
+    'Fake Repository \u53D6\u4EE3 Mock',
+    'Convention Plugins'
+  ];
+  for (var i = 0; i < 5; i++) {
+    h += '<div class="quiz-row"><span class="quiz-tag">' + q1problems[i] + '</span>';
+    h += '<select class="quiz-select" onchange="S.part1Matches[' + i + ']=this.value" ' + (done ? 'disabled' : '') + '>';
+    h += '<option value="">\u8ACB\u9078\u64C7\u2026</option>';
+    for (var j = 0; j < 5; j++) {
+      var sel = (S.part1Matches && S.part1Matches[i] === q1answers[j]) ? ' selected' : '';
+      h += '<option value="' + escapeHtmlAttr(q1answers[j]) + '"' + sel + '>' + q1answers[j] + '</option>';
+    }
+    h += '</select></div>';
+  }
+  h += '<div id="quiz1-result"></div>';
+  h += '<button class="btn btn-pri" onclick="checkQuiz1()"' + (done ? ' disabled' : '') + '>\u63D0\u4EA4\u7B54\u6848</button></div>';
+
+  // --- 簡報卡 ---
+  h += briefCard(1,
+    'NIA \u5168\u8C8C\u8207\u5B78\u7FD2\u5730\u5716',
+    ['NIA \u662F Google \u5B98\u65B9\u7684 Android \u6700\u4F73\u5BE6\u8E10\u53C3\u8003\u61C9\u7528','\u63A1\u7528\u4E09\u5C64\u67B6\u69CB + \u6A21\u7D44\u5316','\u6280\u8853\u68E7\u6DB5\u84CB Compose/Flow/Hilt/Room'],
+    '\u300C\u6211\u5011\u70BA\u4EC0\u9EBC\u8981\u53C3\u8003 NIA \u800C\u4E0D\u662F\u81EA\u5DF1\u8A2D\u8A08\uFF1F\u300D',
+    'NIA \u7531 Google Android \u5718\u968A\u7DAD\u8B77\uFF0C\u4EE3\u8868\u4E86 Android \u958B\u767C\u7684\u5B98\u65B9\u63A8\u85A6\u67B6\u69CB\u6A21\u5F0F\uFF0C\u7D93\u904E\u5927\u91CF\u5BE6\u6230\u9A57\u8B49\uFF0C\u53EF\u4EE5\u5927\u5E45\u964D\u4F4E\u6211\u5011\u7684\u67B6\u69CB\u6C7A\u7B56\u98A8\u96AA\u3002'
+  );
+
+  return h;
+}
+
+function checkQuiz1() {
+  var correct = [
+    '\u4E09\u5C64\u67B6\u69CB\uFF08UI/Domain/Data\uFF09',
+    '\u56B4\u683C\u7684\u6A21\u7D44\u4F9D\u8CF4\u65B9\u5411',
+    'Offline-first + Room \u4F5C SSOT',
+    'Fake Repository \u53D6\u4EE3 Mock',
+    'Convention Plugins'
+  ];
+  var allRight = true;
+  for (var i = 0; i < 5; i++) {
+    if (!S.part1Matches || S.part1Matches[i] !== correct[i]) { allRight = false; break; }
+  }
+  var el = document.getElementById('quiz1-result');
+  if (allRight) {
+    el.innerHTML = '<p style="color:#4ade80;font-weight:700">\u2705 \u5168\u90E8\u6B63\u78BA\uFF01\u4F60\u5DF2\u638C\u63E1 NIA \u89E3\u6C7A\u7684\u6838\u5FC3\u554F\u984C\u3002</p>';
+    completePart(1);
+    addXP(50, 'Part 1 \u914D\u5C0D\u984C\u5168\u5C0D');
+  } else {
+    el.innerHTML = '<p style="color:#f87171">\u274C \u6709\u914D\u5C0D\u932F\u8AA4\uFF0C\u8ACB\u518D\u60F3\u60F3\u6BCF\u500B\u554F\u984C\u5C0D\u61C9\u54EA\u500B NIA \u89E3\u6CD5\u3002</p>';
+  }
+}
+
+// ============================================================
+// Part 2: 三層架構
+// ============================================================
+function getPart2() {
+  const done = S.completedParts.includes(2);
+  const read = S.readParts.includes(2);
+  let h = '<div class="part-hdr"><span class="tag">Part 2</span><h1>\uD83C\uDFD7\uFE0F \u4E09\u5C64\u67B6\u69CB</h1><p class="desc">\u8CC7\u6599\u5982\u4F55\u5F9E DB \u6D41\u5411\u87A2\u5E55 \u2014 \u7B2C\u4E00\u6027\u539F\u7406\uFF1A\u55AE\u5411\u8CC7\u6599\u6D41</p></div>';
+
+  // --- UI Layer accordion ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\uD83D\uDDA5\uFE0F UI Layer\uFF1AViewModel + Compose</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>UI Layer \u7684\u6838\u5FC3\u662F <strong>ViewModel</strong> \u6301\u6709 <strong>UiState</strong>\uFF08\u4EE5 sealed interface \u5EFA\u6A21\uFF09\uFF0CCompose \u900F\u904E <code>collectAsState</code> \u89C0\u5BDF StateFlow\uFF0C\u7576\u72C0\u614B\u8B8A\u66F4\u6642\u81EA\u52D5\u91CD\u7D44\u3002</p>';
+  h += codeBlock(
+    'sealed interface ForYouUiState {\n' +
+    '    data object Loading : ForYouUiState\n' +
+    '    data class Success(\n' +
+    '        val feed: List<UserNewsResource>\n' +
+    '    ) : ForYouUiState\n' +
+    '}\n\n' +
+    '@HiltViewModel\n' +
+    'class ForYouViewModel @Inject constructor(\n' +
+    '    private val getUserNewsResources: GetUserNewsResourcesUseCase\n' +
+    ') : ViewModel() {\n' +
+    '    val uiState: StateFlow<ForYouUiState> = \n' +
+    '        getUserNewsResources()\n' +
+    '            .map(ForYouUiState::Success)\n' +
+    '            .stateIn(\n' +
+    '                scope = viewModelScope,\n' +
+    '                started = SharingStarted.WhileSubscribed(5_000),\n' +
+    '                initialValue = ForYouUiState.Loading\n' +
+    '            )\n' +
+    '}'
+  );
+  h += '</div></div></div>';
+
+  // --- Domain Layer accordion ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\u2699\uFE0F Domain Layer\uFF1AUseCase\uFF08\u53EF\u9078\uFF09</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>Domain Layer \u662F<strong>\u53EF\u9078\u7684</strong>\u3002\u53EA\u6709\u7576\u696D\u52D9\u908F\u8F2F\u88AB\u591A\u500B ViewModel \u5171\u7528\u6642\uFF0C\u624D\u6703\u62BD\u51FA\u70BA UseCase\u3002NIA \u4F7F\u7528 <code>operator fun invoke</code> \u6163\u4F8B\uFF0C\u8B93 UseCase \u53EF\u4EE5\u50CF\u51FD\u5F0F\u4E00\u6A23\u547C\u53EB\u3002</p>';
+  h += codeBlock(
+    'class GetUserNewsResourcesUseCase @Inject constructor(\n' +
+    '    private val newsRepository: NewsRepository,\n' +
+    '    private val userDataRepository: UserDataRepository\n' +
+    ') {\n' +
+    '    operator fun invoke(): Flow<List<UserNewsResource>> =\n' +
+    '        newsRepository.getNewsResources()\n' +
+    '            .combine(userDataRepository.userData) { news, userData ->\n' +
+    '                news.mapToUserNewsResources(userData)\n' +
+    '            }\n' +
+    '}'
+  );
+  h += '</div></div></div>';
+
+  // --- Data Layer accordion ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\uD83D\uDCBE Data Layer\uFF1ARepository + DataSource</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>Data Layer \u63A1\u7528 <strong>Repository \u4ECB\u9762 + \u5BE6\u4F5C\u5206\u96E2</strong>\u7684\u6A21\u5F0F\u3002\u4ECB\u9762\u5B9A\u7FA9\u5728 core:data\uFF0C\u5BE6\u4F5C\u53EF\u4EE5\u88AB\u66FF\u63DB\uFF08\u4F8B\u5982\u6E2C\u8A66\u6642\u7528 Fake\uFF09\u3002DataSource \u5C01\u88DD\u5177\u9AD4\u7684\u8CC7\u6599\u4F86\u6E90\u3002</p>';
+  h += codeBlock(
+    'interface NewsRepository {\n' +
+    '    fun getNewsResources(): Flow<List<NewsResource>>\n' +
+    '    fun getNewsResource(id: String): Flow<NewsResource>\n' +
+    '}\n\n' +
+    'class OfflineFirstNewsRepository @Inject constructor(\n' +
+    '    private val newsResourceDao: NewsResourceDao,\n' +
+    '    private val network: NiaNetworkDataSource\n' +
+    ') : NewsRepository {\n' +
+    '    override fun getNewsResources(): Flow<List<NewsResource>> =\n' +
+    '        newsResourceDao.getNewsResources()\n' +
+    '            .map { it.map(NewsResourceEntity::asExternalModel) }\n' +
+    '}'
+  );
+  h += '</div></div></div>';
+
+  // --- Insight Blocks ---
+  h += insightBlock(3, 'WhileSubscribed(5_000) \u7684 5 \u79D2\u9B54\u6CD5\u6578\u5B57\uFF1A\u7576\u6C92\u6709\u8A02\u95B1\u8005\u6642\uFF0CStateFlow \u6703\u7B49 5 \u79D2\u624D\u505C\u6B62\u4E0A\u904A\u7684 Flow\u3002\u9019\u8B93\u87A2\u5E55\u65CB\u8F49\uFF08\u901A\u5E38 < 5 \u79D2\uFF09\u6642\u4E0D\u6703\u91CD\u65B0\u89F8\u767C\u6578\u64DA\u8ACB\u6C42\uFF0C\u53C8\u4E0D\u6703\u6C38\u9060\u4FDD\u6301\u6D3B\u8E8D\u6D6A\u8CBB\u8CC7\u6E90\u3002');
+  h += insightBlock(4, 'sealed interface vs sealed class\uFF1AKotlin 1.5+ \u5F15\u5165 sealed interface\uFF0C\u6BD4 sealed class \u66F4\u5F48\u6027\u2014\u2014\u56E0\u70BA\u4E00\u500B\u985E\u53EF\u4EE5\u5BE6\u4F5C\u591A\u500B sealed interface\uFF0C\u4F46\u53EA\u80FD\u7E7C\u627F\u4E00\u500B sealed class\u3002NIA \u5168\u9762\u63A1\u7528 sealed interface \u4F86\u5EFA\u6A21 UiState\u3002');
+  h += insightBlock(5, 'operator fun invoke \u8B93 UseCase \u53EF\u4EE5\u50CF\u51FD\u5F0F\u4E00\u6A23\u547C\u53EB\uFF1AgetUserNewsResources() \u800C\u4E0D\u662F getUserNewsResources.execute()\u3002\u9019\u662F Kotlin \u7684\u904B\u7B97\u5B50\u591A\u8F09\u6163\u4F8B\uFF0C\u8B93\u7A0B\u5F0F\u78BC\u66F4\u7C21\u6F54\u3002');
+
+  // --- 閱讀完成按鈕 ---
+  h += '<div class="read-done' + (read ? ' done' : '') + '"><button class="btn ' + (read ? 'btn-sec' : 'btn-pri') + '" onclick="markRead(2)">' + (read ? '\u2713 \u5DF2\u95B1\u8B80' : '\uD83D\uDCD6 \u6A19\u8A18\u5DF2\u95B1\u8B80') + '</button></div>';
+
+  // --- 測驗：排序題 ---
+  var sortLabels = [
+    '\u4F7F\u7528\u8005\u9EDE\u64CA\u300CFollow\u300D\u6309\u9215',
+    'Compose onClick \u89F8\u767C ViewModel \u65B9\u6CD5',
+    'ViewModel \u547C\u53EB Repository.toggleFollow()',
+    'Repository \u66F4\u65B0 Room Database',
+    'Room \u7684 Flow \u81EA\u52D5\u767C\u5C04\u65B0\u8CC7\u6599',
+    'ViewModel \u7684 StateFlow \u6536\u5230\u66F4\u65B0',
+    'Compose \u91CD\u65B0\u7D44\u5408\u986F\u793A\u65B0\u72C0\u614B'
+  ];
+  h += '<div class="quiz-box' + (done ? ' done' : '') + '"><h3>\uD83D\uDD22 \u6392\u5E8F\u984C\uFF1A\u8CC7\u6599\u6D41\u6B63\u78BA\u9806\u5E8F</h3>';
+  h += '<p>\u5C07\u4EE5\u4E0B 7 \u500B\u6B65\u9A5F\u6392\u6210\u6B63\u78BA\u7684\u8CC7\u6599\u6D41\u9806\u5E8F\uFF08\u7528 \u25B2 \u25BC \u79FB\u52D5\uFF09\uFF1A</p>';
+  h += '<div id="sort-container">';
+  for (var si = 0; si < S.part2Order.length; si++) {
+    var idx = S.part2Order[si];
+    h += '<div class="sort-item" data-pos="' + si + '">';
+    h += '<span class="sort-label">' + sortLabels[idx] + '</span>';
+    if (!done) {
+      h += '<button class="sort-btn" onclick="moveSortItem(' + si + ',-1)">\u25B2</button>';
+      h += '<button class="sort-btn" onclick="moveSortItem(' + si + ',1)">\u25BC</button>';
+    }
+    h += '</div>';
+  }
+  h += '</div>';
+  h += '<div id="quiz2-result"></div>';
+  h += '<button class="btn btn-pri" onclick="checkQuiz2()"' + (done ? ' disabled' : '') + '>\u63D0\u4EA4\u7B54\u6848</button></div>';
+
+  // --- 簡報卡 ---
+  h += briefCard(2,
+    '\u4E09\u5C64\u67B6\u69CB',
+    ['UI Layer \u7528 sealed interface \u5EFA\u6A21\u72C0\u614B','Domain Layer \u7684 UseCase \u662F\u53EF\u9078\u7684','Data Layer \u7528 Repository \u4ECB\u9762\u9694\u96E2\u5BE6\u4F5C'],
+    '\u300CDomain Layer \u662F\u4E0D\u662F\u591A\u6B64\u4E00\u8209\uFF1F\u300D',
+    'Domain Layer \u662F\u53EF\u9078\u7684\u3002\u53EA\u6709\u7576\u591A\u500B ViewModel \u9700\u8981\u5171\u7528\u540C\u4E00\u6BB5\u696D\u52D9\u908F\u8F2F\u6642\u624D\u62BD\u51FA UseCase\uFF0C\u5426\u5247\u76F4\u63A5\u5728 ViewModel \u4E2D\u547C\u53EB Repository \u5373\u53EF\u3002'
+  );
+
+  return h;
+}
+
+function moveSortItem(pos, dir) {
+  var newPos = pos + dir;
+  if (newPos < 0 || newPos >= S.part2Order.length) return;
+  var tmp = S.part2Order[pos];
+  S.part2Order[pos] = S.part2Order[newPos];
+  S.part2Order[newPos] = tmp;
+  save();render();
+}
+
+function checkQuiz2() {
+  var correct = [0, 1, 2, 3, 4, 5, 6];
+  var allRight = true;
+  for (var i = 0; i < 7; i++) {
+    if (S.part2Order[i] !== correct[i]) { allRight = false; break; }
+  }
+  var el = document.getElementById('quiz2-result');
+  if (allRight) {
+    el.innerHTML = '<p style="color:#4ade80;font-weight:700">\u2705 \u5B8C\u7F8E\uFF01\u4F60\u5DF2\u638C\u63E1\u55AE\u5411\u8CC7\u6599\u6D41\u7684\u6B63\u78BA\u9806\u5E8F\u3002</p>';
+    completePart(2);
+    addXP(50, 'Part 2 \u6392\u5E8F\u984C\u5168\u5C0D');
+  } else {
+    el.innerHTML = '<p style="color:#f87171">\u274C \u9806\u5E8F\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u60F3\u60F3\u8CC7\u6599\u5F9E\u4F7F\u7528\u8005\u64CD\u4F5C\u5230\u756B\u9762\u66F4\u65B0\u7684\u5B8C\u6574\u6D41\u7A0B\u3002</p>';
+  }
+}
+
+// ============================================================
+// Part 3: 模組化設計
+// ============================================================
+function getPart3() {
+  const done = S.completedParts.includes(3);
+  const read = S.readParts.includes(3);
+  let h = '<div class="part-hdr"><span class="tag">Part 3</span><h1>\uD83E\uDDE9 \u6A21\u7D44\u5316\u8A2D\u8A08</h1><p class="desc">\u7528\u6A21\u7D44\u908A\u754C\u964D\u4F4E\u8907\u96DC\u5EA6 \u2014 \u7B2C\u4E00\u6027\u539F\u7406\uFF1A\u5206\u800C\u6CBB\u4E4B</p></div>';
+
+  // --- 三種模組類型 accordion ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\uD83D\uDCE6 \u4E09\u7A2E\u6A21\u7D44\u985E\u578B</div><div class="acc-body"><div class="acc-inner">';
+  h += '<ul>';
+  h += '<li><strong>app \u6A21\u7D44</strong>\uFF1A\u61C9\u7528\u7A0B\u5F0F\u5165\u53E3\u9EDE\uFF0C\u8CA0\u8CAC\u4E32\u63A5\u6240\u6709 feature \u6A21\u7D44\uFF0C\u8A2D\u5B9A Navigation\u3001Hilt Application \u7B49</li>';
+  h += '<li><strong>feature \u6A21\u7D44</strong>\uFF1A\u7368\u7ACB\u529F\u80FD\u55AE\u5143\uFF0C\u5982 <code>feature:foryou</code>\u3001<code>feature:bookmarks</code>\u3001<code>feature:interests</code>\uFF0C\u5305\u542B\u8A72\u529F\u80FD\u7684 UI + ViewModel</li>';
+  h += '<li><strong>core \u6A21\u7D44</strong>\uFF1A\u5171\u7528\u57FA\u790E\u8A2D\u65BD\uFF0C\u5982 <code>core:data</code>\u3001<code>core:model</code>\u3001<code>core:network</code>\u3001<code>core:ui</code>\u3001<code>core:designsystem</code></li>';
+  h += '</ul>';
+  h += '</div></div></div>';
+
+  // --- 依賴方向規則 dep-diagram ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\u2B07\uFE0F \u4F9D\u8CF4\u65B9\u5411\u898F\u5247</div><div class="acc-body"><div class="acc-inner">';
+  h += '<div class="dep-diagram">';
+  h += '<div class="dep-outer"><div class="dep-layer"><strong>app</strong></div><div class="dep-arrow">\u2193 \u53EF\u4EE5\u4F9D\u8CF4</div>';
+  h += '<div class="dep-mid"><div class="dep-layer"><strong>feature:*</strong></div><div class="dep-arrow">\u2193 \u53EF\u4EE5\u4F9D\u8CF4</div>';
+  h += '<div class="dep-inner"><div class="dep-layer"><strong>core:*</strong></div>';
+  h += '</div></div></div></div>';
+  h += '<ul>';
+  h += '<li>\u2705 app \u2192 feature \u2192 core\uFF08\u53EA\u80FD\u5411\u4E0B\u4F9D\u8CF4\uFF09</li>';
+  h += '<li>\u274C feature \u4E0D\u80FD\u4F9D\u8CF4 feature\uFF08\u907F\u514D\u5FAA\u74B0\u4F9D\u8CF4\uFF09</li>';
+  h += '<li>\u274C core \u4E0D\u80FD\u4F9D\u8CF4 feature\uFF08\u4E0D\u80FD\u53CD\u5411\uFF09</li>';
+  h += '</ul>';
+  h += '</div></div></div>';
+
+  // --- Convention Plugins accordion ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\uD83D\uDD27 Convention Plugins</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>NIA \u4F7F\u7528 <strong>Convention Plugins</strong> \u53D6\u4EE3 buildSrc\uFF0C\u7D71\u4E00\u6240\u6709\u6A21\u7D44\u7684 Gradle \u8A2D\u5B9A\u3002\u65B0\u589E\u4E00\u500B feature \u6A21\u7D44\u6642\uFF0C\u53EA\u9700\u5957\u7528\u5C0D\u61C9\u7684 plugin\uFF1A</p>';
+  h += codeBlock(
+    '// build-logic/convention/src/main/kotlin/\n' +
+    '// AndroidFeatureConventionPlugin.kt\n' +
+    'class AndroidFeatureConventionPlugin : Plugin<Project> {\n' +
+    '    override fun apply(target: Project) {\n' +
+    '        with(target) {\n' +
+    '            pluginManager.apply {\n' +
+    '                apply("nowinandroid.android.library")\n' +
+    '                apply("nowinandroid.hilt")\n' +
+    '            }\n' +
+    '            dependencies {\n' +
+    '                add("implementation", project(":core:ui"))\n' +
+    '                add("implementation", project(":core:designsystem"))\n' +
+    '            }\n' +
+    '        }\n' +
+    '    }\n' +
+    '}'
+  );
+  h += '</div></div></div>';
+
+  // --- 比較表 ---
+  h += '<div class="glass-card"><h3>\uD83D\uDCCA \u6A21\u7D44\u5316 vs \u55AE\u6A21\u7D44</h3>';
+  h += '<table class="cmp-table"><thead><tr><th>\u9762\u5411</th><th>\u55AE\u6A21\u7D44</th><th class="cmp-hl">NIA \u6A21\u7D44\u5316</th></tr></thead><tbody>';
+  h += '<tr><td>\u7DE8\u8B6F\u6642\u9593</td><td>\u5168\u90E8\u91CD\u7DE8</td><td class="cmp-hl">\u53EA\u7DE8\u8B8A\u66F4\u6A21\u7D44</td></tr>';
+  h += '<tr><td>\u5718\u968A\u5354\u4F5C</td><td>\u5BB9\u6613\u885D\u7A81</td><td class="cmp-hl">\u5404\u6A21\u7D44\u7368\u7ACB\u958B\u767C</td></tr>';
+  h += '<tr><td>\u7A0B\u5F0F\u78BC\u91CD\u7528</td><td>\u8907\u88FD\u8CBC\u4E0A</td><td class="cmp-hl">core \u6A21\u7D44\u5171\u7528</td></tr>';
+  h += '<tr><td>\u6E2C\u8A66\u9694\u96E2</td><td>\u56F0\u96E3</td><td class="cmp-hl">\u6A21\u7D44\u7D1A\u5225\u9694\u96E2</td></tr>';
+  h += '</tbody></table></div>';
+
+  // --- Insight Blocks ---
+  h += insightBlock(6, 'NIA \u6709\u591A\u5C11\u500B\u6A21\u7D44\uFF1F\u7D04 30+ \u500B\uFF01\u4F46\u5225\u88AB\u6578\u5B57\u5687\u5230\u2014\u2014\u5927\u90E8\u5206\u6A21\u7D44\u7684 build.gradle.kts \u53EA\u67094-5 \u884C\uFF0C\u56E0\u70BA Convention Plugin \u5DF2\u7D93\u8655\u7406\u4E86\u6240\u6709\u91CD\u8907\u8A2D\u5B9A\u3002');
+  h += insightBlock(7, '\u70BA\u4EC0\u9EBC feature \u4E0D\u80FD\u4F9D\u8CF4 feature\uFF1F\u5169\u500B\u539F\u56E0\uFF1A1) \u907F\u514D\u5FAA\u74B0\u4F9D\u8CF4\u5C0E\u81F4\u7DE8\u8B6F\u5931\u6557\uFF1B2) \u4FDD\u6301\u6A21\u7D44\u7368\u7ACB\u6027\uFF0C\u8B93\u4E26\u884C\u7DE8\u8B6F\u66F4\u6709\u6548\u3002\u5982\u679C\u5169\u500B feature \u9700\u8981\u5171\u7528\u908F\u8F2F\uFF0C\u8ACB\u62BD\u5230 core \u6A21\u7D44\u3002');
+  h += insightBlock(8, 'Convention Plugin vs buildSrc\uFF1AbuildSrc \u7684\u4EFB\u4F55\u6539\u52D5\u6703\u89F8\u767C\u6240\u6709\u6A21\u7D44\u91CD\u65B0\u7DE8\u8B6F\uFF0C\u800C Convention Plugin \u4F5C\u70BA\u7368\u7ACB\u7684\u5B50\u5C08\u6848\uFF08included build\uFF09\uFF0C\u53EA\u6709\u76F4\u63A5\u4F9D\u8CF4\u5B83\u7684\u6A21\u7D44\u624D\u6703\u91CD\u7DE8\u3002');
+  h += insightBlock(9, 'api vs implementation \u4F9D\u8CF4\u7684\u5DEE\u7570\uFF1Aimplementation \u4E0D\u6703\u5C07\u4F9D\u8CF4\u50B3\u905E\u7D66\u4E0A\u5C64\u6A21\u7D44\uFF0C\u800C api \u6703\u3002NIA \u9810\u8A2D\u7528 implementation \u4EE5\u6E1B\u5C11\u7DE8\u8B6F\u7684\u300C\u6CE2\u53CA\u7BC4\u570D\u300D\uFF0C\u53EA\u5728\u5FC5\u8981\u6642\u624D\u7528 api\u3002');
+
+  // --- 閱讀完成按鈕 ---
+  h += '<div class="read-done' + (read ? ' done' : '') + '"><button class="btn ' + (read ? 'btn-sec' : 'btn-pri') + '" onclick="markRead(3)">' + (read ? '\u2713 \u5DF2\u95B1\u8B80' : '\uD83D\uDCD6 \u6A19\u8A18\u5DF2\u95B1\u8B80') + '</button></div>';
+
+  // --- 測驗：是非題 ---
+  var tfQuestions = [
+    'Feature \u6A21\u7D44\u53EF\u4EE5\u4F9D\u8CF4\u53E6\u4E00\u500B Feature \u6A21\u7D44',
+    'Core \u6A21\u7D44\u53EF\u4EE5\u4F9D\u8CF4 App \u6A21\u7D44',
+    'Convention Plugin \u7684\u76EE\u7684\u662F\u7D71\u4E00 Gradle \u8A2D\u5B9A',
+    'NIA \u4F7F\u7528 buildSrc \u4F86\u7BA1\u7406\u5171\u7528\u8A2D\u5B9A',
+    'app \u6A21\u7D44\u8CA0\u8CAC\u4E32\u63A5\u6240\u6709 feature \u6A21\u7D44'
+  ];
+  h += '<div class="quiz-box' + (done ? ' done' : '') + '"><h3>\u2753 \u662F\u975E\u984C</h3>';
+  for (var ti = 0; ti < 5; ti++) {
+    h += '<div class="tf-row"><span class="tf-code">' + tfQuestions[ti] + '</span>';
+    h += '<button class="tf-btn' + (S.part3Answers[ti] === true ? ' selected' : '') + '" onclick="setPart3Answer(' + ti + ',true)"' + (done ? ' disabled' : '') + '>\u2705 \u662F</button>';
+    h += '<button class="tf-btn' + (S.part3Answers[ti] === false ? ' selected' : '') + '" onclick="setPart3Answer(' + ti + ',false)"' + (done ? ' disabled' : '') + '>\u274C \u5426</button>';
+    h += '</div>';
+  }
+  h += '<div id="quiz3-result"></div>';
+  h += '<button class="btn btn-pri" onclick="checkQuiz3()"' + (done ? ' disabled' : '') + '>\u63D0\u4EA4\u7B54\u6848</button></div>';
+
+  // --- 簡報卡 ---
+  h += briefCard(3,
+    '\u6A21\u7D44\u5316\u8A2D\u8A08',
+    ['\u4E09\u7A2E\u6A21\u7D44\u985E\u578B\u5404\u6709\u8077\u8CAC','\u4F9D\u8CF4\u53EA\u80FD\u5411\u4E0B','Convention Plugin \u7D71\u4E00\u8A2D\u5B9A'],
+    '\u300C\u6A21\u7D44\u5316\u6703\u4E0D\u6703\u8B93\u5C08\u6848\u7D50\u69CB\u592A\u8907\u96DC\uFF1F\u300D',
+    '\u521D\u671F\u78BA\u5BE6\u9700\u8981\u5B78\u7FD2\u6210\u672C\uFF0C\u4F46 NIA \u900F\u904E Convention Plugin \u81EA\u52D5\u5957\u7528\u8A2D\u5B9A\uFF0C\u65B0\u589E\u6A21\u7D44\u53EA\u9700\u6975\u5C11\u8A2D\u5B9A\u3002\u9577\u671F\u4F86\u770B\uFF0C\u6A21\u7D44\u5316\u5E36\u4F86\u7684\u7DE8\u8B6F\u52A0\u901F\u548C\u5718\u968A\u5354\u4F5C\u6548\u7387\u63D0\u5347\u9060\u8D85\u521D\u59CB\u6210\u672C\u3002'
+  );
+
+  return h;
+}
+
+function setPart3Answer(idx, v) {
+  S.part3Answers[idx] = v;
+  save();render();
+}
+
+function checkQuiz3() {
+  var correct = [false, false, true, false, true];
+  var allRight = true;
+  for (var i = 0; i < 5; i++) {
+    if (S.part3Answers[i] !== correct[i]) { allRight = false; break; }
+  }
+  var el = document.getElementById('quiz3-result');
+  if (allRight) {
+    el.innerHTML = '<p style="color:#4ade80;font-weight:700">\u2705 \u5168\u90E8\u6B63\u78BA\uFF01\u4F60\u5DF2\u638C\u63E1\u6A21\u7D44\u5316\u7684\u6838\u5FC3\u898F\u5247\u3002</p>';
+    completePart(3);
+    addXP(50, 'Part 3 \u662F\u975E\u984C\u5168\u5C0D');
+  } else {
+    el.innerHTML = '<p style="color:#f87171">\u274C \u6709\u7B54\u6848\u932F\u8AA4\uFF0C\u8ACB\u518D\u60F3\u60F3\u6A21\u7D44\u9593\u7684\u4F9D\u8CF4\u898F\u5247\u3002</p>';
+  }
+}
+
+// ============================================================
+// Part 4: 數據流與離線優先
+// ============================================================
+function getPart4() {
+  const done = S.completedParts.includes(4);
+  const read = S.readParts.includes(4);
+  let h = '<div class="part-hdr"><span class="tag">Part 4</span><h1>\uD83D\uDD04 \u6578\u64DA\u6D41\u8207\u96E2\u7DDA\u512A\u5148</h1><p class="desc">\u8B93 App \u96E2\u7DDA\u4E5F\u80FD\u7528 \u2014 \u7B2C\u4E00\u6027\u539F\u7406\uFF1A\u672C\u5730\u8CC7\u6599\u5EAB\u624D\u662F\u552F\u4E00\u771F\u76F8</p></div>';
+
+  // --- Offline-first 策略 accordion ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\uD83D\uDCF4 Offline-first \u7B56\u7565</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>NIA \u63A1\u7528 <strong>Offline-first</strong> \u67B6\u69CB\uFF1ARoom Database \u4F5C\u70BA <strong>Single Source of Truth (SSOT)</strong>\u3002UI \u6C38\u9060\u5F9E\u672C\u5730 DB \u8B80\u53D6\u8CC7\u6599\uFF0C\u4E0D\u76F4\u63A5\u5B58\u53D6\u7DB2\u8DEF\u3002\u7DB2\u8DEF\u53EA\u8CA0\u8CAC\u540C\u6B65\u8CC7\u6599\u5230\u672C\u5730\u3002</p>';
+  h += codeBlock(
+    'class OfflineFirstTopicsRepository @Inject constructor(\n' +
+    '    private val topicDao: TopicDao,\n' +
+    '    private val network: NiaNetworkDataSource,\n' +
+    '    private val notifier: Notifier\n' +
+    ') : TopicsRepository {\n\n' +
+    '    override fun getTopics(): Flow<List<Topic>> =\n' +
+    '        topicDao.getTopicEntities()\n' +
+    '            .map { it.map(TopicEntity::asExternalModel) }\n\n' +
+    '    override suspend fun syncWith(\n' +
+    '        synchronizer: Synchronizer\n' +
+    '    ): Boolean =\n' +
+    '        synchronizer.changeListSync(\n' +
+    '            versionReader = ChangeListVersions::topicVersion,\n' +
+    '            changeListFetcher = { \n' +
+    '                network.getTopicChangeList(after = it) \n' +
+    '            },\n' +
+    '            modelUpdater = { changedIds ->\n' +
+    '                val networkTopics = network.getTopics(\n' +
+    '                    ids = changedIds\n' +
+    '                )\n' +
+    '                topicDao.upsertTopics(\n' +
+    '                    networkTopics.map(NetworkTopic::asEntity)\n' +
+    '                )\n' +
+    '            }\n' +
+    '        )\n' +
+    '}'
+  );
+  h += '</div></div></div>';
+
+  // --- WorkManager 背景同步 accordion ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\u23F0 WorkManager \u80CC\u666F\u540C\u6B65</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>NIA \u4F7F\u7528 <strong>WorkManager</strong> \u5728\u80CC\u666F\u5B9A\u671F\u540C\u6B65\u8CC7\u6599\u3002\u540C\u6B65\u5931\u6557\u6642\u56DE\u50B3 <code>Result.retry()</code>\uFF0C\u8B93\u7CFB\u7D71\u81EA\u52D5\u6392\u7A0B\u91CD\u8A66\uFF08\u4F7F\u7528\u6307\u6578\u9000\u907F\u7B56\u7565\uFF09\u3002</p>';
+  h += codeBlock(
+    'class SyncWorker @AssistedInject constructor(\n' +
+    '    @Assisted appContext: Context,\n' +
+    '    @Assisted workerParams: WorkerParameters,\n' +
+    '    private val syncManager: SyncManager\n' +
+    ') : CoroutineWorker(appContext, workerParams) {\n\n' +
+    '    override suspend fun doWork(): Result =\n' +
+    '        if (syncManager.sync()) Result.success()\n' +
+    '        else Result.retry()\n' +
+    '}'
+  );
+  h += '</div></div></div>';
+
+  // --- 模型轉換鏈 accordion ---
+  h += '<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">\uD83D\uDD04 \u6A21\u578B\u8F49\u63DB\u93C8\uFF1ANetworkModel \u2192 Entity \u2192 ExternalModel</div><div class="acc-body"><div class="acc-inner">';
+  h += '<p>NIA \u4F7F\u7528\u4E09\u7A2E Model\uFF0C\u5404\u53F8\u5176\u8077\uFF1A</p>';
+  h += '<ul>';
+  h += '<li><strong>NetworkXxx</strong>\uFF1A\u5C0D\u61C9 API \u56DE\u61C9\u7684 JSON \u7D50\u69CB</li>';
+  h += '<li><strong>XxxEntity</strong>\uFF1ARoom \u8CC7\u6599\u5EAB\u7684\u8868\u683C\u7D50\u69CB</li>';
+  h += '<li><strong>Xxx</strong>\uFF08ExternalModel\uFF09\uFF1AUI \u5C64\u548C Domain \u5C64\u4F7F\u7528\u7684\u4E7E\u6DE8\u6A21\u578B</li>';
+  h += '</ul>';
+  h += '<div class="dep-diagram">';
+  h += '<div class="dep-layer">NetworkTopic</div><div class="dep-arrow">\u2193 asEntity()</div>';
+  h += '<div class="dep-layer">TopicEntity</div><div class="dep-arrow">\u2193 asExternalModel()</div>';
+  h += '<div class="dep-layer">Topic</div>';
+  h += '</div>';
+  h += codeBlock(
+    '// Network \u2192 Entity\n' +
+    'fun NetworkTopic.asEntity() = TopicEntity(\n' +
+    '    id = id,\n' +
+    '    name = name,\n' +
+    '    shortDescription = shortDescription,\n' +
+    '    longDescription = longDescription,\n' +
+    '    url = url,\n' +
+    '    imageUrl = imageUrl\n' +
+    ')\n\n' +
+    '// Entity \u2192 ExternalModel\n' +
+    'fun TopicEntity.asExternalModel() = Topic(\n' +
+    '    id = id,\n' +
+    '    name = name,\n' +
+    '    shortDescription = shortDescription,\n' +
+    '    longDescription = longDescription,\n' +
+    '    url = url,\n' +
+    '    imageUrl = imageUrl\n' +
+    ')'
+  );
+  h += '</div></div></div>';
+
+  // --- Insight Blocks ---
+  h += insightBlock(10, '\u70BA\u4EC0\u9EBC\u4E0D\u76F4\u63A5 cache API response\uFF1F\u56E0\u70BA Room \u63D0\u4F9B\u7D50\u69CB\u5316\u8CC7\u6599\u5B58\u53D6\u3001\u652F\u63F4\u589E\u91CF\u66F4\u65B0\u548C\u8907\u96DC\u67E5\u8A62\u3002\u76F4\u63A5\u5FEB\u53D6 JSON \u5247\u7121\u6CD5\u505A\u5230\u9019\u4E9B\uFF0C\u800C\u4E14\u6BCF\u6B21\u90FD\u8981\u53CD\u5E8F\u5217\u5316\u6574\u500B\u56DE\u61C9\u3002');
+  h += insightBlock(11, 'Change List Sync \u6A21\u5F0F\uFF1ANIA \u4E0D\u6703\u6BCF\u6B21\u90FD\u62C9\u53D6\u5168\u90E8\u8CC7\u6599\uFF0C\u800C\u662F\u900F\u904E version number \u8FFD\u8E64\u4E0A\u6B21\u540C\u6B65\u4F4D\u7F6E\uFF0C\u53EA\u62C9\u53D6\u8B8A\u66F4\u7684\u90E8\u5206\u3002\u9019\u5927\u5E45\u7BC0\u7701\u7DB2\u8DEF\u6D41\u91CF\u548C\u4F3A\u670D\u5668\u8CA0\u64D4\u3002');
+  h += insightBlock(12, '\u4E09\u7A2E Model \u7684\u547D\u540D\u6163\u4F8B\uFF1ANetworkXxx\uFF08API \u5C64\uFF09\u3001XxxEntity\uFF08DB \u5C64\uFF09\u3001Xxx\uFF08Domain/UI \u5C64\uFF09\u3002\u9019\u500B\u547D\u540D\u898F\u5247\u8B93\u4F60\u4E00\u773C\u5C31\u77E5\u9053\u6A21\u578B\u5C6C\u65BC\u54EA\u4E00\u5C64\u3002');
+  h += insightBlock(13, '\u70BA\u4EC0\u9EBC\u7528 upsert \u800C\u4E0D\u662F insert\uFF1Fupsert = insert or update\u3002\u7576\u8CC7\u6599\u5DF2\u5B58\u5728\u6642\u81EA\u52D5\u66F4\u65B0\uFF0C\u4E0D\u5B58\u5728\u6642\u81EA\u52D5\u65B0\u589E\uFF0C\u907F\u514D\u4E3B\u9375\u885D\u7A81\u5C0E\u81F4 crash\u3002Room 2.5+ \u539F\u751F\u652F\u63F4 @Upsert \u6CE8\u89E3\u3002');
+
+  // --- 閱讀完成按鈕 ---
+  h += '<div class="read-done' + (read ? ' done' : '') + '"><button class="btn ' + (read ? 'btn-sec' : 'btn-pri') + '" onclick="markRead(4)">' + (read ? '\u2713 \u5DF2\u95B1\u8B80' : '\uD83D\uDCD6 \u6A19\u8A18\u5DF2\u95B1\u8B80') + '</button></div>';
+
+  // --- 測驗：選擇題 ---
+  var mcQuestions = [
+    {
+      q: '\u5728 NIA \u4E2D\uFF0CUI \u7684\u8CC7\u6599\u4F86\u6E90\u662F\uFF1F',
+      opts: ['\u76F4\u63A5\u5F9E API \u53D6\u5F97', '\u5F9E Room Database \u8B80\u53D6', '\u5F9E SharedPreferences', '\u5F9E\u8A18\u61B6\u9AD4\u5FEB\u53D6']
+    },
+    {
+      q: '\u7576\u7DB2\u8DEF\u4E0D\u53EF\u7528\u6642\uFF0COfflineFirstTopicsRepository \u6703\uFF1F',
+      opts: ['\u62CB\u51FA\u4F8B\u5916', '\u8FD4\u56DE\u7A7A\u5217\u8868', '\u8FD4\u56DE\u672C\u5730\u5FEB\u53D6\u8CC7\u6599', '\u986F\u793A\u932F\u8AA4\u756B\u9762']
+    },
+    {
+      q: 'WorkManager \u540C\u6B65\u5931\u6557\u6642\u7684\u7B56\u7565\u662F\uFF1F',
+      opts: ['\u653E\u68C4\u540C\u6B65', '\u7ACB\u5373\u91CD\u8A66', '\u56DE\u50B3 Result.retry() \u8B93\u7CFB\u7D71\u6392\u7A0B\u91CD\u8A66', '\u901A\u77E5\u4F7F\u7528\u8005']
+    },
+    {
+      q: 'NIA \u7684 Model \u8F49\u63DB\u93C8\u6B63\u78BA\u9806\u5E8F\u662F\uFF1F',
+      opts: ['Entity \u2192 NetworkModel \u2192 ExternalModel', 'NetworkModel \u2192 Entity \u2192 ExternalModel', 'ExternalModel \u2192 Entity \u2192 NetworkModel', 'NetworkModel \u2192 ExternalModel \u2192 Entity']
+    },
+    {
+      q: 'NIA \u4F7F\u7528 Change List Sync \u800C\u975E\u5B8C\u6574\u540C\u6B65\u7684\u4E3B\u8981\u539F\u56E0\u662F\uFF1F',
+      opts: ['\u5BE6\u4F5C\u66F4\u7C21\u55AE', '\u6E1B\u5C11\u7DB2\u8DEF\u6D41\u91CF\u548C\u4F3A\u670D\u5668\u8CA0\u64D4', '\u76F8\u5BB9 GraphQL', 'Android \u5E73\u53F0\u9650\u5236']
+    }
+  ];
+  var correctMC = [1, 2, 2, 1, 1];
+
+  h += '<div class="quiz-box' + (done ? ' done' : '') + '"><h3>\uD83D\uDCDD \u9078\u64C7\u984C</h3>';
+  for (var qi = 0; qi < 5; qi++) {
+    h += '<div class="quiz-row"><p><strong>Q' + (qi + 1) + '. ' + mcQuestions[qi].q + '</strong></p>';
+    for (var oi = 0; oi < 4; oi++) {
+      var selClass = S.part4Answers[qi] === oi ? ' selected' : '';
+      h += '<button class="quiz-opt' + selClass + '" onclick="setPart4Answer(' + qi + ',' + oi + ')"' + (done ? ' disabled' : '') + '>' + String.fromCharCode(65 + oi) + '. ' + mcQuestions[qi].opts[oi] + '</button>';
+    }
+    h += '</div>';
+  }
+  h += '<div id="quiz4-result"></div>';
+  h += '<button class="btn btn-pri" onclick="checkQuiz4()"' + (done ? ' disabled' : '') + '>\u63D0\u4EA4\u7B54\u6848</button></div>';
+
+  // --- 簡報卡 ---
+  h += briefCard(4,
+    '\u6578\u64DA\u6D41\u8207\u96E2\u7DDA\u512A\u5148',
+    ['Room \u4F5C\u70BA\u552F\u4E00\u8CC7\u6599\u4F86\u6E90','WorkManager \u8655\u7406\u80CC\u666F\u540C\u6B65','\u4E09\u5C64 Model \u8F49\u63DB\u78BA\u4FDD\u95DC\u6CE8\u9EDE\u5206\u96E2'],
+    '\u300C\u96E2\u7DDA\u512A\u5148\u6703\u4E0D\u6703\u8B93\u5BE6\u4F5C\u66F4\u8907\u96DC\uFF1F\u300D',
+    '\u78BA\u5BE6\u589E\u52A0\u4E86\u521D\u59CB\u958B\u767C\u6210\u672C\uFF0C\u4F46 NIA \u7684 OfflineFirst Repository \u6A21\u5F0F\u5DF2\u7D93\u5EFA\u7ACB\u4E86\u6E05\u6670\u7684\u6A23\u677F\u3002\u4E00\u65E6\u57FA\u790E\u8A2D\u65BD\u5C31\u4F4D\uFF0C\u65B0\u529F\u80FD\u53EA\u9700\u9075\u5FAA\u76F8\u540C\u6A21\u5F0F\uFF0C\u800C\u4F7F\u7528\u8005\u7372\u5F97\u7684\u96E2\u7DDA\u9AD4\u9A57\u63D0\u5347\u662F\u5DE8\u5927\u7684\u3002'
+  );
+
+  return h;
+}
+
+function setPart4Answer(qi, oi) {
+  S.part4Answers[qi] = oi;
+  save();render();
+}
+
+function checkQuiz4() {
+  var correct = [1, 2, 2, 1, 1];
+  var allRight = true;
+  for (var i = 0; i < 5; i++) {
+    if (S.part4Answers[i] !== correct[i]) { allRight = false; break; }
+  }
+  var el = document.getElementById('quiz4-result');
+  if (allRight) {
+    el.innerHTML = '<p style="color:#4ade80;font-weight:700">\u2705 \u5168\u90E8\u6B63\u78BA\uFF01\u4F60\u5DF2\u638C\u63E1\u96E2\u7DDA\u512A\u5148\u67B6\u69CB\u7684\u6838\u5FC3\u6982\u5FF5\u3002</p>';
+    completePart(4);
+    addXP(50, 'Part 4 \u9078\u64C7\u984C\u5168\u5C0D');
+  } else {
+    el.innerHTML = '<p style="color:#f87171">\u274C \u6709\u7B54\u6848\u932F\u8AA4\uFF0C\u8ACB\u518D\u5FA9\u7FD2\u96E2\u7DDA\u512A\u5148\u548C\u8CC7\u6599\u6D41\u7684\u76F8\u95DC\u5167\u5BB9\u3002</p>';
+  }
+}
+
+
+// ===== Part 5: 依賴注入與測試策略 =====
+function getPart5(){
+  const done=S.completedParts.includes(5);
+  const read=S.readParts.includes(5);
+  let h='<div class="part-hdr"><span class="tag">Part 5</span><h1>\u{1F9EA} 依賴注入與測試策略</h1><p class="desc">Hilt DI + Fake-based Testing — 第一性原理：可測試性決定架構品質</p></div>';
+
+  // --- Accordion 1: Hilt DI ---
+  h+='<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">Hilt DI：@Binds vs @Provides</div><div class="acc-body"><div class="acc-inner">';
+  h+='<p><strong>@Binds</strong> 用於告訴 Hilt 某個介面對應哪個實作類別。它是一個 <code>abstract</code> 函式，不需要寫函式本體。</p>';
+  h+='<p><strong>@Provides</strong> 用於需要手動建構物件的情境，例如建立 Room Database 實例或第三方函式庫物件。</p>';
+  h+='<p><strong>@HiltViewModel</strong> 搭配 <code>@Inject constructor</code>，讓 Hilt 自動提供 ViewModel 所需的依賴。</p>';
+  h+=codeBlock(
+    '@Module\n' +
+    '@InstallIn(SingletonComponent::class)\n' +
+    'abstract class DataModule {\n' +
+    '    @Binds\n' +
+    '    abstract fun bindsTopicsRepository(\n' +
+    '        impl: OfflineFirstTopicsRepository\n' +
+    '    ): TopicsRepository\n' +
+    '}'
+  );
+  h+=codeBlock(
+    '@Module\n' +
+    '@InstallIn(SingletonComponent::class)\n' +
+    'object DatabaseModule {\n' +
+    '    @Provides\n' +
+    '    @Singleton\n' +
+    '    fun providesNiaDatabase(\n' +
+    '        @ApplicationContext context: Context\n' +
+    '    ): NiaDatabase = Room.databaseBuilder(\n' +
+    '        context,\n' +
+    '        NiaDatabase::class.java,\n' +
+    '        "nia-database"\n' +
+    '    ).build()\n' +
+    '}'
+  );
+  h+=insightBlock(14,'<strong>@Binds vs @Provides 的選擇準則</strong><br>有介面對應實作 → 用 <code>@Binds</code>（abstract function，零成本）<br>需要自己 new / 建構物件 → 用 <code>@Provides</code>（需要寫函式本體）<br>簡單規則：如果你只是「指路」用 Binds，如果你要「造東西」用 Provides。');
+  h+=insightBlock(17,'<strong>@HiltViewModel 背後做了什麼</strong><br>Hilt 會為每個標註 @HiltViewModel 的 ViewModel 產生一個 <code>ViewModelProvider.Factory</code>，透過 <code>SavedStateHandle</code> 工廠自動注入所有 constructor 參數。這就是為什麼你可以在 Compose 裡直接用 <code>hiltViewModel()</code> 取得完整注入的 ViewModel。');
+  h+='</div></div></div>';
+
+  // --- Accordion 2: Fakes over Mocks ---
+  h+='<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">Fakes over Mocks：NIA 的測試哲學</div><div class="acc-body"><div class="acc-inner">';
+  h+='<p>NIA <strong>不使用 Mockito</strong>，而是為每個 Repository 介面建立 <strong>Fake</strong> 實作。</p>';
+  h+='<p><strong>Fake</strong> 是完整的介面實作，具有可預測的行為。它不只是回傳預設值，而是模擬真實的資料流。</p>';
+  h+=codeBlock(
+    'class TestNewsRepository : NewsRepository {\n' +
+    '    private val newsResourcesFlow =\n' +
+    '        MutableSharedFlow<List<NewsResource>>()\n' +
+    '\n' +
+    '    override fun getNewsResources():\n' +
+    '        Flow<List<NewsResource>> = newsResourcesFlow\n' +
+    '\n' +
+    '    fun sendNewsResources(\n' +
+    '        resources: List<NewsResource>\n' +
+    '    ) {\n' +
+    '        newsResourcesFlow.tryEmit(resources)\n' +
+    '    }\n' +
+    '}'
+  );
+  h+=insightBlock(15,'<strong>為什麼 Fake 比 Mock 好？</strong><br>Mock 像一台「錄放機」：你告訴它收到什麼就回什麼，它沒有邏輯。<br>Fake 是真實行為的「簡化版」：它實作了完整介面，有自己的內部狀態和邏輯。<br>好處：(1) 可以跨多個測試重用 (2) 重構介面時 Fake 會編譯失敗提醒你 (3) 測試更接近真實行為。');
+  h+='</div></div></div>';
+
+  // --- Accordion 3: ViewModel 測試 ---
+  h+='<div class="accordion"><div class="acc-head" onclick="toggleAcc(this)">ViewModel 測試：Turbine + Fake</div><div class="acc-body"><div class="acc-inner">';
+  h+='<p>NIA 使用 <strong>Turbine</strong> 函式庫測試 Flow 的發射值，搭配注入 Fake Repository。</p>';
+  h+=codeBlock(
+    'class ForYouViewModelTest {\n' +
+    '    private val newsRepository = TestNewsRepository()\n' +
+    '    private lateinit var viewModel: ForYouViewModel\n' +
+    '\n' +
+    '    @Before\n' +
+    '    fun setup() {\n' +
+    '        viewModel = ForYouViewModel(\n' +
+    '            getUserNewsResources =\n' +
+    '                GetUserNewsResourcesUseCase(\n' +
+    '                    newsRepository = newsRepository,\n' +
+    '                    userDataRepository =\n' +
+    '                        TestUserDataRepository()\n' +
+    '                )\n' +
+    '        )\n' +
+    '    }\n' +
+    '\n' +
+    '    @Test\n' +
+    '    fun stateIsInitiallyLoading() = runTest {\n' +
+    '        assertEquals(\n' +
+    '            ForYouUiState.Loading,\n' +
+    '            viewModel.uiState.value\n' +
+    '        )\n' +
+    '    }\n' +
+    '}'
+  );
+  h+=insightBlock(16,'<strong>Turbine 測試 Flow 的原理</strong><br>Turbine 提供 <code>flow.test { }</code> 擴充函式，它會啟動一個收集器來監聽 Flow 發射的值。<br>你可以用 <code>awaitItem()</code> 取得下一個值，用 <code>expectNoEvents()</code> 確認沒有多餘發射。<br>內建逾時機制：如果 Flow 沒有在指定時間內發射值，測試會自動失敗。');
+  h+='</div></div></div>';
+
+  // --- 費曼驗證 ---
+  h+='<div class="quiz-box"><div class="quiz-row"><span class="quiz-tag">\u{1F9E0} 費曼驗證</span></div>';
+  h+='<p>用你自己的話解釋以下概念，寫完後給自己打個星星自評。</p>';
+
+  var feynmanQs=[
+    {q:'請用你自己的話解釋：為什麼 NIA 選擇 Fake 而不是 Mock 來做測試？',ref:'Fake 是介面的真實但簡化實作，具有可預測的行為。Mock 則只是記錄和回放呼叫，不包含真正的邏輯。Fake 可以跨測試重用，維護成本更低。'},
+    {q:'請用你自己的話解釋：@Binds 和 @Provides 的差別是什麼？什麼時候用哪個？',ref:'@Binds 用於告訴 Hilt 某個介面的實作是哪個類別，不需要寫函式本體。@Provides 用於需要手動建構物件的情況，例如建立 Room Database。'},
+    {q:'請用你自己的話解釋：sealed interface UiState 在 NIA 中扮演什麼角色？',ref:'sealed interface 用於定義畫面的所有可能狀態（如 Loading、Success、Error），讓 Compose 可以透過 when 表達式窮舉所有狀態，確保不會遺漏任何情況。'}
+  ];
+
+  for(var i=0;i<3;i++){
+    h+='<div class="feynman-q"><p><strong>Q'+(i+1)+':</strong> '+feynmanQs[i].q+'</p>';
+    h+='<textarea class="feynman-ta" rows="4" placeholder="用你自己的話寫下理解..." oninput="S.part5Answers['+i+']=this.value;save()">'+escapeHtmlAttr(S.part5Answers[i])+'</textarea>';
+    // 自評星星
+    h+='<div class="rating">';
+    for(var s=1;s<=5;s++){
+      h+='<span class="rating-star'+(S.part5Ratings[i]>=s?' lit':'')+'" onclick="S.part5Ratings['+i+']='+s+';save();render()">\u2605</span>';
+    }
+    h+='<span style="margin-left:8px;opacity:0.7">'+(S.part5Ratings[i]>0?S.part5Ratings[i]+' / 5':'未評分')+'</span>';
+    h+='</div>';
+    // 參考答案
+    h+='<div class="feynman-ref"><strong>參考答案：</strong>'+feynmanQs[i].ref+'</div>';
+    h+='</div>';
+  }
+
+  h+='<button class="btn btn-pri" onclick="checkFeynman5()" '+(done?'disabled':'')+'>'+( done?'\u2705 已完成驗證':'\u{1F50D} 驗證我的理解')+'</button>';
+  h+='</div>';
+
+  // --- 閱讀完成按鈕 ---
+  h+='<div class="read-done'+(read?' done':'')+'"><button class="btn '+(read?'btn-sec':'btn-pri')+'" onclick="markRead(5)">'+(read?'\u2713 已閱讀':'\u{1F4D6} 標記已閱讀')+'</button></div>';
+
+  // --- 簡報卡 ---
+  h+=briefCard(5,
+    '依賴注入與測試策略',
+    ['Hilt 透過 @Binds/@Provides 管理依賴','Fake 優於 Mock 是 NIA 的核心測試策略','ViewModel 測試使用 Turbine + 注入 Fake'],
+    'Fake 維護成本不是更高嗎？',
+    '初始成本確實較高，但 Fake 可以跨多個測試重用，且與真實介面行為一致，重構時更不容易因為 Mock 設定過度耦合而大量失敗。NIA 證明了這個策略在中大型專案中更可持續。'
+  );
+
+  return h;
+}
+
+// --- checkFeynman5 ---
+function checkFeynman5(){
+  var keywords=[
+    ['介面','實作','行為','重用'],
+    ['介面','實作','建構'],
+    ['狀態','when','窮舉']
+  ];
+  var minMatch=[2,2,2];
+  var allPass=true;
+  var msgs=[];
+
+  for(var i=0;i<3;i++){
+    var ans=S.part5Answers[i]||'';
+    var rating=S.part5Ratings[i]||0;
+    var matched=0;
+    for(var k=0;k<keywords[i].length;k++){
+      if(ans.indexOf(keywords[i][k])!==-1) matched++;
+    }
+    var lenOk=ans.length>=10;
+    var kwOk=matched>=minMatch[i];
+    var rtOk=rating>=3;
+    if(!lenOk) msgs.push('Q'+(i+1)+'：回答太短（至少 10 字）');
+    if(!kwOk) msgs.push('Q'+(i+1)+'：請包含更多關鍵概念（需要至少 '+minMatch[i]+' 個關鍵字）');
+    if(!rtOk) msgs.push('Q'+(i+1)+'：自評需要至少 3 星');
+    if(!lenOk||!kwOk||!rtOk) allPass=false;
+  }
+
+  if(allPass){
+    completePart(5);
+    addXP(50,'費曼驗證全數通過！');
+    alert('\u{1F389} 太棒了！你已通過 Part 5 的費曼驗證！');
+  }else{
+    alert('\u274C 尚未通過：\n'+msgs.join('\n'));
+  }
+  render();
+}
+
+
+// ===== Part 6: 模擬功能實作 =====
+function getPart6(){
+  const done=S.completedParts.includes(6);
+  const read=S.readParts.includes(6);
+  let h='<div class="part-hdr"><span class="tag">Part 6</span><h1>\u{1F6E0}\uFE0F 模擬功能實作</h1><p class="desc">實作簡化版 Bookmarks 功能 — 第一性原理：做中學是最好的學習</p></div>';
+
+  var step=S.part6Step||0;
+
+  // Step definitions
+  var steps=[];
+
+  // Step 0: Domain Model
+  steps.push({
+    title:'定義 Domain Model',
+    file:'core/model/BookmarkedNews.kt',
+    content:function(){
+      var s='<p>第一步：定義領域模型。這是整個功能的資料基礎。</p>';
+      s+=codeBlock(
+        'data class BookmarkedNews(\n' +
+        '    val id: String,\n' +
+        '    val title: String,\n' +
+        '    val description: String,\n' +
+        '    val isBookmarked: Boolean\n' +
+        ')'
+      );
+      return s;
+    }
+  });
+
+  // Step 1: Repository 介面 (程式碼編輯題 1)
+  var code1Default=
+    'interface BookmarksRepository {\n' +
+    '    // TODO: 定義取得書籤新聞的方法（回傳 Flow）\n' +
+    '    \n' +
+    '    // TODO: 定義切換書籤狀態的方法（suspend）\n' +
+    '}';
+  steps.push({
+    title:'定義 Repository 介面',
+    file:'core/data/BookmarksRepository.kt',
+    content:function(){
+      var s='<p>定義一個 <code>BookmarksRepository</code> 介面，包含 <code>getBookmarkedNews()</code>（回傳 Flow）和 <code>toggleBookmark()</code>（suspend）方法。</p>';
+      s+='<textarea class="code-editor" rows="8" oninput="S.part6Code1=this.value;save()">'+ escapeHtmlAttr(S.part6Code1||code1Default)+'</textarea>';
+      s+=insightBlock(18,'<strong>Repository 介面定義的設計思維</strong><br>NIA 的做法是「先定合約再寫實作」（Contract-first）。<br>先定義介面，所有依賴方都面向介面編程，實作可以隨時替換（正式版、測試版、離線版）。這也是 Dependency Inversion Principle 的體現。');
+      return s;
+    }
+  });
+
+  // Step 2: UiState (程式碼編輯題 2)
+  var code2Default=
+    'sealed interface BookmarksUiState {\n' +
+    '    // TODO: 定義 Loading 狀態\n' +
+    '    \n' +
+    '    // TODO: 定義 Success 狀態（包含 bookmarks 列表）\n' +
+    '}';
+  steps.push({
+    title:'定義 UiState',
+    file:'feature/bookmarks/BookmarksUiState.kt',
+    content:function(){
+      var s='<p>定義 <code>BookmarksUiState</code> sealed interface，包含 <code>Loading</code> 和 <code>Success</code>（帶有 <code>BookmarkedNews</code> 列表）兩種狀態。</p>';
+      s+='<textarea class="code-editor" rows="8" oninput="S.part6Code2=this.value;save()">'+escapeHtmlAttr(S.part6Code2||code2Default)+'</textarea>';
+      return s;
+    }
+  });
+
+  // Step 3: Fake Repository (程式碼編輯題 3)
+  var code3Default=
+    'class TestBookmarksRepository : BookmarksRepository {\n' +
+    '    // TODO: 使用 MutableStateFlow 儲存書籤資料\n' +
+    '    \n' +
+    '    // TODO: 實作 getBookmarkedNews()\n' +
+    '    \n' +
+    '    // TODO: 實作 toggleBookmark()\n' +
+    '}';
+  steps.push({
+    title:'實作 Fake Repository',
+    file:'core/testing/TestBookmarksRepository.kt',
+    content:function(){
+      var s='<p>實作一個 <code>TestBookmarksRepository</code>，使用 <code>MutableStateFlow</code> 儲存資料。這就是 NIA 的 Fake 策略。</p>';
+      s+='<textarea class="code-editor" rows="12" oninput="S.part6Code3=this.value;save()">'+escapeHtmlAttr(S.part6Code3||code3Default)+'</textarea>';
+      s+=insightBlock(19,'<strong>MutableStateFlow vs MutableSharedFlow</strong><br><code>MutableStateFlow</code>：保留最新值，新訂閱者會立即收到最新值（conflated）。適合表示「狀態」。<br><code>MutableSharedFlow</code>：不保留值，只有在 emit 時才收到。適合表示「事件」。<br>在 Fake Repository 中通常用 StateFlow，因為 Repository 代表的是資料狀態。');
+      return s;
+    }
+  });
+
+  // Step 4: ViewModel
+  steps.push({
+    title:'實作 ViewModel',
+    file:'feature/bookmarks/BookmarksViewModel.kt',
+    content:function(){
+      var s='<p>ViewModel 將 Repository 的 Flow 轉換為 UI 可觀察的 StateFlow，並處理使用者互動。</p>';
+      s+=codeBlock(
+        '@HiltViewModel\n' +
+        'class BookmarksViewModel @Inject constructor(\n' +
+        '    private val bookmarksRepository: BookmarksRepository\n' +
+        ') : ViewModel() {\n' +
+        '    val uiState: StateFlow<BookmarksUiState> =\n' +
+        '        bookmarksRepository.getBookmarkedNews()\n' +
+        '            .map(BookmarksUiState::Success)\n' +
+        '            .stateIn(\n' +
+        '                scope = viewModelScope,\n' +
+        '                started = SharingStarted\n' +
+        '                    .WhileSubscribed(5_000),\n' +
+        '                initialValue =\n' +
+        '                    BookmarksUiState.Loading\n' +
+        '            )\n' +
+        '\n' +
+        '    fun toggleBookmark(newsId: String) {\n' +
+        '        viewModelScope.launch {\n' +
+        '            bookmarksRepository\n' +
+        '                .toggleBookmark(newsId)\n' +
+        '        }\n' +
+        '    }\n' +
+        '}'
+      );
+      return s;
+    }
+  });
+
+  // Step 5: Compose UI
+  steps.push({
+    title:'Compose UI',
+    file:'feature/bookmarks/BookmarksScreen.kt',
+    content:function(){
+      var s='<p>最後一步：用 Compose 建立 UI，連接 ViewModel。</p>';
+      s+=codeBlock(
+        '@Composable\n' +
+        'fun BookmarksScreen(\n' +
+        '    viewModel: BookmarksViewModel =\n' +
+        '        hiltViewModel()\n' +
+        ') {\n' +
+        '    val uiState by viewModel.uiState\n' +
+        '        .collectAsStateWithLifecycle()\n' +
+        '\n' +
+        '    when (uiState) {\n' +
+        '        is BookmarksUiState.Loading -> {\n' +
+        '            CircularProgressIndicator()\n' +
+        '        }\n' +
+        '        is BookmarksUiState.Success -> {\n' +
+        '            LazyColumn {\n' +
+        '                items(\n' +
+        '                    (uiState as\n' +
+        '                        BookmarksUiState.Success\n' +
+        '                    ).bookmarks\n' +
+        '                ) { news ->\n' +
+        '                    BookmarkItem(\n' +
+        '                        news = news,\n' +
+        '                        onToggle = {\n' +
+        '                            viewModel\n' +
+        '                                .toggleBookmark(\n' +
+        '                                    news.id\n' +
+        '                                )\n' +
+        '                        }\n' +
+        '                    )\n' +
+        '                }\n' +
+        '            }\n' +
+        '        }\n' +
+        '    }\n' +
+        '}'
+      );
+      return s;
+    }
+  });
+
+  // Render current step
+  h+='<div class="step-card"><div class="step-num">Step '+(step+1)+' / '+steps.length+'</div>';
+  h+='<h3>'+steps[step].title+'</h3>';
+  h+='<div class="step-file"><code>'+steps[step].file+'</code></div>';
+  h+=steps[step].content();
+  h+='</div>';
+
+  // Step navigation
+  h+='<div class="step-nav">';
+  if(step>0){
+    h+='<button class="btn btn-sec" onclick="S.part6Step='+(step-1)+';save();render()">\u2190 上一步</button>';
+  }else{
+    h+='<button class="btn btn-sec" disabled>\u2190 上一步</button>';
+  }
+  h+='<span style="opacity:0.7">Step '+(step+1)+' / '+steps.length+'</span>';
+  if(step<steps.length-1){
+    h+='<button class="btn btn-pri" onclick="S.part6Step='+(step+1)+';save();render()">下一步 \u2192</button>';
+  }else{
+    h+='<button class="btn btn-pri" onclick="checkCode6()" '+(done?'disabled':'')+'>'+( done?'\u2705 已完成驗證':'\u{1F50D} 驗證程式碼')+'</button>';
+  }
+  h+='</div>';
+
+  // --- 閱讀完成按鈕 ---
+  h+='<div class="read-done'+(read?' done':'')+'"><button class="btn '+(read?'btn-sec':'btn-pri')+'" onclick="markRead(6)">'+(read?'\u2713 已閱讀':'\u{1F4D6} 標記已閱讀')+'</button></div>';
+
+  // --- 簡報卡 ---
+  h+=briefCard(6,
+    '模擬功能實作',
+    ['按照 NIA 模式實作完整功能流程','從 Model \u2192 Repository \u2192 UiState \u2192 ViewModel \u2192 Compose'],
+    '這個流程不會太冗長嗎？',
+    '初看步驟多，但每一步都有明確職責和可測試性。實際開發中，這個模式讓新功能的開發變成填空題，降低了認知負擔。'
+  );
+
+  return h;
+}
+
+// --- checkCode6 ---
+function checkCode6(){
+  var checks=[
+    {code:S.part6Code1||'',keywords:['fun getBookmarkedNews','Flow','fun toggleBookmark','suspend'],label:'Repository 介面'},
+    {code:S.part6Code2||'',keywords:['Loading','Success','BookmarkedNews'],label:'UiState 定義'},
+    {code:S.part6Code3||'',keywords:['MutableStateFlow','override','getBookmarkedNews','toggleBookmark'],label:'Fake Repository'}
+  ];
+  var allPass=true;
+  var msgs=[];
+
+  for(var i=0;i<checks.length;i++){
+    var missing=[];
+    for(var k=0;k<checks[i].keywords.length;k++){
+      if(checks[i].code.indexOf(checks[i].keywords[k])===-1){
+        missing.push(checks[i].keywords[k]);
+      }
+    }
+    if(missing.length>0){
+      allPass=false;
+      msgs.push(checks[i].label+'：缺少關鍵字 → '+missing.join(', '));
+    }
+  }
+
+  if(allPass){
+    completePart(6);
+    addXP(60,'程式碼實作全數通過！');
+    alert('\u{1F389} 太棒了！你已完成 Part 6 的功能實作！');
+  }else{
+    alert('\u274C 尚未通過：\n'+msgs.join('\n'));
+  }
+  render();
+}
+
+
+// ===== Part 7: 綜合驗證 — 20 題選擇題 =====
+function getPart7(){
+  const done=S.completedParts.includes(7);
+  let h='<div class="part-hdr"><span class="tag">Part 7</span><h1>\u{1F3C6} 綜合驗證</h1><p class="desc">20 題選擇題，涵蓋所有章節 — 第一性原理：驗證才是學習的終點</p></div>';
+
+  h+='<p>這是最終驗證，20 題涵蓋所有章節的核心概念。<strong>答對 16 題以上即通過。</strong></p>';
+
+  var questions=[
+    {q:'NIA 的主要目的是什麼？',opts:['一個上架的新聞 App','Android 開發最佳實踐的參考實作','Google 內部工具','Kotlin 教學範例']},
+    {q:'NIA 的三層架構不包含哪一層？',opts:['UI Layer','Domain Layer','Data Layer','Network Layer']},
+    {q:'在 NIA 中，ViewModel 暴露給 UI 的資料型別通常是？',opts:['LiveData','StateFlow','Observable','Channel']},
+    {q:'sealed interface 相比 sealed class 的優勢是？',opts:['效能更好','可以實作多個 sealed interface','語法更簡單','支援 Java']},
+    {q:'NIA 的模組依賴方向是？',opts:['core \u2192 feature \u2192 app','app \u2192 feature \u2192 core','任意依賴','雙向依賴']},
+    {q:'Feature 模組之間的依賴規則是？',opts:['可以互相依賴','不能互相依賴','只能單向依賴','透過 app 模組中繼']},
+    {q:'Convention Plugin 的主要用途是？',opts:['管理版本號','統一模組的 Gradle 設定','自動生成程式碼','執行測試']},
+    {q:'NIA 大約有多少個模組？',opts:['5-10 個','10-20 個','30+ 個','100+ 個']},
+    {q:'NIA 的 Offline-first 策略中，Single Source of Truth 是？',opts:['API Server','Room Database','SharedPreferences','DataStore']},
+    {q:'模型轉換鏈的正確順序是？',opts:['NetworkModel \u2192 ExternalModel \u2192 Entity','NetworkModel \u2192 Entity \u2192 ExternalModel','Entity \u2192 NetworkModel \u2192 ExternalModel','ExternalModel \u2192 Entity \u2192 NetworkModel']},
+    {q:'WorkManager 在 NIA 中負責什麼？',opts:['UI 渲染','背景資料同步','依賴注入','路由導航']},
+    {q:'Change List Sync 的好處是？',opts:['減少本地儲存','只同步變更部分，減少流量','加快 UI 渲染','簡化程式碼']},
+    {q:'@Binds 用於什麼場景？',opts:['建立資料庫','告訴 Hilt 介面對應的實作','啟動 Worker','定義路由']},
+    {q:'NIA 為什麼偏好 Fake 而非 Mock？',opts:['Fake 寫起來更快','Fake 有真實行為且可重用','Mock 不支援 Kotlin','Google 規定']},
+    {q:'ViewModel 測試中，Turbine 的用途是？',opts:['效能測試','測試 Flow 的發射值','UI 測試','網路模擬']},
+    {q:'@HiltViewModel 做了什麼？',opts:['自動建立 ViewModel 工廠','讓 Hilt 提供 ViewModel 的依賴注入','加快編譯','啟用 Compose']},
+    {q:'WhileSubscribed(5_000) 中的 5 秒是？',opts:['API 逾時','停止上游 Flow 前的等待時間','重試間隔','動畫時長']},
+    {q:'operator fun invoke 在 UseCase 中的好處是？',opts:['提升效能','讓 UseCase 可以像函式一樣被呼叫','支援 Java','自動快取']},
+    {q:'NIA 的 Navigation 使用什麼框架？',opts:['Fragment Navigation','Compose Navigation','自製路由','Deep Link only']},
+    {q:'如果要在 NIA 中新增一個功能，第一步應該？',opts:['修改 app 模組','建立新的 feature 模組','修改 core:network','直接在現有 feature 中加']}
+  ];
+
+  var correctAnswers=[1,3,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1];
+
+  // Render questions in groups of 4
+  for(var i=0;i<questions.length;i++){
+    if(i%4===0) h+='<div class="glass-card" style="margin-bottom:16px">';
+    h+='<div class="quiz-box" style="margin-bottom:12px">';
+    h+='<div class="quiz-row"><span class="quiz-tag">Q'+(i+1)+'</span> '+questions[i].q+'</div>';
+    for(var j=0;j<questions[i].opts.length;j++){
+      var selected=S.part7Answers[i]===j;
+      var cls='quiz-opt';
+      if(S.part7Submitted){
+        if(j===correctAnswers[i]) cls+=' correct';
+        else if(selected && j!==correctAnswers[i]) cls+=' wrong';
+      }else if(selected){
+        cls+=' selected';
+      }
+      h+='<div class="'+cls+'" onclick="'+(S.part7Submitted?'':'S.part7Answers['+i+']='+j+';save();render()')+'"><span style="font-weight:600;margin-right:8px">'+String.fromCharCode(65+j)+')</span>'+questions[i].opts[j]+'</div>';
+    }
+    h+='</div>';
+    if(i%4===3||i===questions.length-1) h+='</div>';
+  }
+
+  // 結果顯示
+  if(S.part7Submitted){
+    var score=0;
+    var wrongList=[];
+    for(var i=0;i<correctAnswers.length;i++){
+      if(S.part7Answers[i]===correctAnswers[i]) score++;
+      else wrongList.push('Q'+(i+1)+': 正確答案是 '+String.fromCharCode(65+correctAnswers[i])+') '+questions[i].opts[correctAnswers[i]]);
+    }
+    h+='<div class="glass-card" style="text-align:center;padding:24px">';
+    h+='<h2>'+( score>=16?'\u{1F389}':'\u{1F4AA}')+' 得分：'+score+' / 20</h2>';
+    if(score>=16){
+      h+='<p style="color:#4caf50;font-weight:600">\u2705 恭喜通過最終驗證！</p>';
+    }else{
+      h+='<p style="color:#ff9800;font-weight:600">\u274C 需要 16 題以上才能通過，再加油！</p>';
+    }
+    if(wrongList.length>0){
+      h+='<div style="text-align:left;margin-top:16px"><strong>錯誤題目的正確答案：</strong><ul>';
+      for(var w=0;w<wrongList.length;w++){
+        h+='<li>'+wrongList[w]+'</li>';
+      }
+      h+='</ul></div>';
+    }
+    h+='</div>';
+  }
+
+  // 提交按鈕
+  if(!S.part7Submitted){
+    h+='<div style="text-align:center;margin:24px 0"><button class="btn btn-pri" onclick="checkQuiz7()">\u{1F4E4} 提交答案</button></div>';
+  }else if(!done){
+    h+='<div style="text-align:center;margin:24px 0"><button class="btn btn-sec" onclick="S.part7Submitted=false;S.part7Answers=Array(20).fill(null);save();render()">\u{1F504} 重新作答</button></div>';
+  }
+
+  // Insight
+  h+=insightBlock(20,'<strong>持續學習建議</strong><br>推薦閱讀 NIA 原始碼的順序：<br>1\uFE0F\u20E3 <code>core:model</code> — 了解資料結構<br>2\uFE0F\u20E3 <code>core:data</code> — 了解資料流與 Repository 模式<br>3\uFE0F\u20E3 <code>feature:foryou</code> — 了解完整的 UI Layer 如何串接<br>這個順序從底層往上，讓你自然建立完整的心智模型。');
+
+  return h;
+}
+
+// --- checkQuiz7 ---
+function checkQuiz7(){
+  var correctAnswers=[1,3,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1];
+  var unanswered=[];
+  for(var i=0;i<20;i++){
+    if(S.part7Answers[i]===null||S.part7Answers[i]===undefined){
+      unanswered.push('Q'+(i+1));
+    }
+  }
+  if(unanswered.length>0){
+    alert('\u26A0\uFE0F 還有 '+unanswered.length+' 題未作答：'+unanswered.join(', '));
+    return;
+  }
+
+  S.part7Submitted=true;
+  save();
+
+  var score=0;
+  for(var i=0;i<correctAnswers.length;i++){
+    if(S.part7Answers[i]===correctAnswers[i]) score++;
+  }
+
+  if(score>=16){
+    completePart(7);
+    addXP(100,'通過最終驗證！答對 '+score+' / 20 題');
+  }
+
+  render();
+}
+
+
+// ============================================================
+// INIT
+// ============================================================
+function init(){
+  load();
+  updateStreak();
+  if(S.openingDone){
+    document.getElementById('opening').style.display='none';
+  }
+  render();
+  
+  // Close sidebar on main click (mobile)
+  document.getElementById('main-content').addEventListener('click',()=>{
+    document.getElementById('sidebar').classList.remove('open');
+  });
+}
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
