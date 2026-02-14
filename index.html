@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning Pages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FAFAF8;
+  --lav: #B8A9E8;
+  --pink: #F2B8C6;
+  --blue: #A8C8E8;
+  --mint: #B8E8D0;
+  --txt: #2D2B3A;
+  --txt2: #8E8A9E;
+  --glass: rgba(255,255,255,0.6);
+  --glass-b: rgba(255,255,255,0.3);
+  --sh: 0 4px 24px rgba(0,0,0,0.04);
+  --sh2: 0 8px 32px rgba(0,0,0,0.08);
+  --r: 20px;
+  --ease: all .3s cubic-bezier(.4,0,.2,1);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: linear-gradient(135deg, #f5f0ff 0%, #fff5f8 50%, #f0f7ff 100%);
+  color: var(--txt);
+  min-height: 100vh;
+  line-height: 1.7;
+}
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 60px 24px 80px;
+}
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.header-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--lav), var(--pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.header p {
+  font-size: 1rem;
+  color: var(--txt2);
+}
+.card {
+  display: block;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-b);
+  border-radius: var(--r);
+  box-shadow: var(--sh);
+  padding: 28px 32px;
+  margin-bottom: 16px;
+  text-decoration: none;
+  color: var(--txt);
+  transition: var(--ease);
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh2);
+}
+.card-icon {
+  font-size: 1.6rem;
+  margin-bottom: 8px;
+}
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.card-desc {
+  font-size: 0.9rem;
+  color: var(--txt2);
+}
+.footer {
+  text-align: center;
+  margin-top: 48px;
+  font-size: 0.8rem;
+  color: var(--txt2);
+}
+
+@media (max-width: 480px) {
+  .container { padding: 40px 16px 60px; }
+  .header h1 { font-size: 1.6rem; }
+  .card { padding: 22px 20px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-icon">📚</div>
+    <h1>Learning Pages</h1>
+    <p>互動式學習頁面集合</p>
+  </div>
+
+  <a class="card" href="clean-architecture.html">
+    <div class="card-icon">🏛️</div>
+    <div class="card-title">Clean Architecture 互動學習</div>
+    <div class="card-desc">Android 專案的 Clean Architecture 實踐 — 含測驗、XP 系統、程式碼走讀</div>
+  </a>
+
+  <!-- 新增學習頁面時，複製上方 card 區塊，修改 href、icon、title、desc 即可 -->
+
+</div>
+<div class="footer">Powered by GitHub Pages</div>
+</body>
+</html>

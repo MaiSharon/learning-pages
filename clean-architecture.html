@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clean Architecture 互動學習</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#FAFAF8;--bg-card:#FFFFFF;
+  --lav:#B8A9E8;--pink:#F2B8C6;--blue:#A8C8E8;--mint:#B8E8D0;
+  --txt:#2D2B3A;--txt2:#8E8A9E;--txt3:#C4C0D0;
+  --glass:rgba(255,255,255,0.6);--glass-b:rgba(255,255,255,0.3);
+  --sh:0 4px 24px rgba(0,0,0,0.04);--sh2:0 8px 32px rgba(0,0,0,0.08);
+  --r:20px;--rs:12px;--rxs:8px;
+  --ease:all .3s cubic-bezier(.4,0,.2,1);
+  --side:280px;--top:64px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans TC','Pretendard',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;overflow-x:hidden}
+h1,h2,h3,h4{font-family:'Pretendard','Noto Sans TC',sans-serif;font-weight:700;line-height:1.3}
+code,pre{font-family:'JetBrains Mono',monospace}
+a{color:var(--lav);text-decoration:none}
+button{cursor:pointer;font-family:inherit;border:none;background:none}
+
+/* Opening */
+.opening{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#f5f0ff 0%,#fff5f8 50%,#f0f7ff 100%);transition:opacity .8s ease}
+.opening.hide{opacity:0;pointer-events:none}
+.opening-box{text-align:center;max-width:520px;padding:60px 40px;animation:fadeUp .8s ease}
+.opening-box h1{font-size:2.4rem;background:linear-gradient(135deg,var(--lav),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+.opening-box .sub{font-size:1.1rem;color:var(--txt2);margin-bottom:32px;line-height:1.8}
+.btn-start{display:inline-block;padding:14px 48px;border-radius:50px;font-size:1rem;font-weight:600;color:#fff;
+  background:linear-gradient(135deg,var(--lav),var(--pink));box-shadow:0 4px 20px rgba(184,169,232,.4);transition:var(--ease)}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(184,169,232,.5)}
+
+/* Topbar */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--top);background:var(--glass);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--glass-b);z-index:100;display:flex;align-items:center;padding:0 24px;gap:16px}
+.topbar .logo{font-weight:700;font-size:1rem;white-space:nowrap;background:linear-gradient(135deg,var(--lav),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.progress-wrap{flex:1;max-width:300px;height:8px;background:#eee;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--lav),var(--pink));border-radius:4px;transition:width .5s ease}
+.xp-badge{display:flex;align-items:center;gap:6px;font-weight:600;font-size:.9rem;color:var(--lav);white-space:nowrap}
+.xp-badge .num{min-width:36px}
+.badge-row{display:flex;gap:4px}
+.badge-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;
+  background:#f0edf8;transition:var(--ease)}
+.badge-icon.earned{background:linear-gradient(135deg,var(--lav),var(--pink));box-shadow:0 2px 8px rgba(184,169,232,.3)}
+.hamburger{display:none;font-size:1.4rem;padding:4px}
+.streak-tag{font-size:.75rem;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,var(--mint),var(--blue));color:var(--txt);font-weight:500;white-space:nowrap}
+
+/* Sidebar */
+.sidebar{position:fixed;top:var(--top);left:0;bottom:0;width:var(--side);background:var(--glass);backdrop-filter:blur(12px);
+  border-right:1px solid var(--glass-b);padding:24px 16px;overflow-y:auto;z-index:90;transition:transform .3s ease}
+.sidebar h3{font-size:.75rem;text-transform:uppercase;letter-spacing:2px;color:var(--txt2);margin-bottom:12px}
+.side-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--rs);margin-bottom:4px;cursor:pointer;transition:var(--ease);font-size:.9rem}
+.side-item:hover{background:rgba(184,169,232,.08)}
+.side-item.active{background:rgba(184,169,232,.15);font-weight:600;color:var(--lav)}
+.side-item.completed{color:var(--mint)}
+.side-item.completed::after{content:'✓';margin-left:auto;color:var(--mint);font-weight:700}
+.side-item.locked{color:var(--txt3);cursor:not-allowed}
+.side-item.locked:hover{background:transparent}
+.side-item .lock{margin-left:auto;font-size:.8rem}
+.side-sep{height:1px;background:var(--glass-b);margin:16px 0}
+.side-stats{font-size:.8rem;color:var(--txt2);line-height:2}
+.side-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.side-badge{font-size:1.2rem;filter:grayscale(1) opacity(.3);transition:var(--ease)}
+.side-badge.earned{filter:none}
+
+/* Main */
+.main{margin-left:var(--side);margin-top:var(--top);min-height:calc(100vh - var(--top));padding:40px 48px 80px}
+
+/* Cards */
+.glass-card{background:var(--bg-card);border:1px solid var(--glass-b);border-radius:var(--r);box-shadow:var(--sh);padding:32px;margin-bottom:24px;transition:var(--ease)}
+.glass-card:hover{box-shadow:var(--sh2)}
+
+/* Part header */
+.part-hdr{margin-bottom:32px}
+.part-hdr .tag{display:inline-block;font-size:.75rem;font-weight:600;padding:4px 14px;border-radius:20px;margin-bottom:12px;
+  background:linear-gradient(135deg,var(--lav),var(--pink));color:#fff}
+.part-hdr h1{font-size:1.8rem;margin-bottom:8px}
+.part-hdr .desc{color:var(--txt2);font-size:1rem}
+
+/* Accordion */
+.accordion{border:1px solid #eee;border-radius:var(--rs);overflow:hidden;margin-bottom:12px}
+.acc-head{width:100%;text-align:left;padding:16px 20px;font-weight:600;font-size:.95rem;display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg-card);transition:var(--ease)}
+.acc-head:hover{background:#faf8ff}
+.acc-head .arrow{transition:transform .3s ease;font-size:.8rem}
+.acc-head.open .arrow{transform:rotate(180deg)}
+.acc-body{max-height:0;overflow:hidden;transition:max-height .4s ease;background:#fdfcff}
+.acc-body.open{max-height:2000px}
+.acc-inner{padding:0 20px 20px}
+
+/* Code */
+.code-wrap{background:#1e1e2e;border-radius:var(--rs);padding:20px;margin:12px 0;overflow-x:auto;font-size:.85rem;line-height:1.6}
+.code-wrap code{color:#cdd6f4;white-space:pre-wrap;word-break:break-all}
+.hl-kw{color:#cba6f7}.hl-ty{color:#89b4fa}.hl-st{color:#a6e3a1}.hl-cm{color:#6c7086;font-style:italic}.hl-an{color:#f9e2af}.hl-fn{color:#89dceb}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:50px;font-size:.9rem;font-weight:500;transition:var(--ease)}
+.btn-pri{background:linear-gradient(135deg,var(--lav),var(--pink));color:#fff;box-shadow:0 4px 16px rgba(184,169,232,.3)}
+.btn-pri:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(184,169,232,.4)}
+.btn-pri:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-sec{background:#f5f3fa;color:var(--lav)}
+.btn-sec:hover{background:#ece8f6}
+.btn-ghost{color:var(--txt2);padding:8px 16px}
+.btn-ghost:hover{color:var(--txt);background:#f5f3fa}
+
+/* Quiz section */
+.quiz-box{background:linear-gradient(135deg,#faf8ff,#fff8fa);border:2px solid #ede8f8;border-radius:var(--r);padding:32px;margin:32px 0}
+.quiz-box h3{font-size:1.1rem;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.quiz-row{display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.quiz-tag{display:inline-block;padding:8px 16px;border-radius:var(--rxs);font-weight:600;font-size:.9rem;min-width:40px;text-align:center;
+  background:var(--bg-card);border:2px solid #e0dce8;cursor:pointer;transition:var(--ease);user-select:none}
+.quiz-tag.selected{border-color:var(--lav);background:#f5f0ff;color:var(--lav)}
+.quiz-tag.correct{border-color:var(--mint);background:#f0faf5;color:#2d8a5e}
+.quiz-tag.wrong{border-color:var(--pink);background:#fff5f8;color:#c44}
+.quiz-tag.matched{opacity:.6;cursor:default}
+.quiz-select{padding:8px 12px;border-radius:var(--rxs);border:2px solid #e0dce8;font-size:.85rem;font-family:inherit;background:var(--bg-card);min-width:200px}
+.quiz-opt{display:block;padding:12px 16px;border-radius:var(--rs);border:2px solid #e0dce8;margin-bottom:8px;cursor:pointer;transition:var(--ease)}
+.quiz-opt:hover{border-color:var(--lav);background:#faf8ff}
+.quiz-opt.selected{border-color:var(--lav);background:#f5f0ff}
+.quiz-opt.correct{border-color:var(--mint);background:#f0faf5}
+.quiz-opt.wrong{border-color:var(--pink);background:#fff5f8}
+.quiz-result{margin-top:16px;padding:16px;border-radius:var(--rs);font-weight:500}
+.quiz-result.pass{background:#f0faf5;color:#2d8a5e}
+.quiz-result.fail{background:#fff5f8;color:#c44}
+
+/* Sorting quiz */
+.sort-item{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg-card);border:1px solid #eee;border-radius:var(--rxs);margin-bottom:6px}
+.sort-item .num{width:24px;height:24px;border-radius:50%;background:var(--lav);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+.sort-item .text{flex:1;font-size:.85rem}
+.sort-btn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.7rem;background:#f5f3fa;color:var(--txt2);transition:var(--ease)}
+.sort-btn:hover{background:var(--lav);color:#fff}
+
+/* TF quiz */
+.tf-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--bg-card);border:1px solid #eee;border-radius:var(--rs);margin-bottom:8px}
+.tf-code{flex:1;font-size:.85rem;font-family:'JetBrains Mono',monospace;color:var(--txt)}
+.tf-btns{display:flex;gap:6px;flex-shrink:0}
+.tf-btn{padding:6px 14px;border-radius:20px;font-size:.8rem;font-weight:600;border:2px solid #eee;transition:var(--ease)}
+.tf-btn:hover{border-color:var(--lav)}
+.tf-btn.sel-t{border-color:var(--mint);background:#f0faf5;color:#2d8a5e}
+.tf-btn.sel-f{border-color:var(--pink);background:#fff5f8;color:#c44}
+
+/* Code editor */
+.code-editor{width:100%;min-height:200px;background:#1e1e2e;color:#cdd6f4;border:2px solid #313244;border-radius:var(--rs);
+  padding:20px;font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.6;resize:vertical;tab-size:4}
+.code-editor:focus{outline:none;border-color:var(--lav)}
+
+/* Briefing card */
+.brief-card{background:linear-gradient(135deg,#faf8ff,#f8f5ff);border:1px solid #e8e0f8;border-radius:var(--r);padding:28px 32px;margin:24px 0}
+.brief-card h3{font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.brief-point{padding:8px 0;font-size:.9rem;display:flex;gap:8px}
+.brief-point .pin{flex-shrink:0}
+.brief-qa{margin-top:16px;padding:16px;background:rgba(184,169,232,.08);border-radius:var(--rs);font-size:.9rem}
+.brief-qa .q{font-weight:600;margin-bottom:8px}
+
+/* Insight */
+.insight-block{border:1px dashed var(--lav);border-radius:var(--rs);margin:16px 0;overflow:hidden}
+.insight-head{width:100%;text-align:left;padding:14px 20px;font-size:.9rem;font-weight:500;color:var(--lav);display:flex;justify-content:space-between;align-items:center;transition:var(--ease)}
+.insight-head:hover{background:rgba(184,169,232,.05)}
+.insight-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.insight-body.open{max-height:500px}
+.insight-inner{padding:0 20px 16px;font-size:.9rem;color:var(--txt2);line-height:1.8}
+.insight-xp{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:10px;background:var(--mint);color:#fff;font-weight:600}
+
+/* Dependency animation */
+.dep-diagram{display:flex;justify-content:center;align-items:center;gap:0;margin:24px 0;flex-wrap:wrap}
+.dep-layer{padding:16px 24px;border-radius:var(--rs);font-weight:600;font-size:.85rem;text-align:center;min-width:140px;position:relative}
+.dep-arrow{font-size:1.4rem;color:var(--lav);animation:pulse 2s infinite;margin:0 4px}
+@keyframes arrowFlow{0%,100%{opacity:.3}50%{opacity:1}}
+.dep-outer{background:#fce4ec;color:#c62828;border:2px solid #ef9a9a}
+.dep-mid{background:#e3f2fd;color:#1565c0;border:2px solid #90caf9}
+.dep-inner{background:#e8f5e9;color:#2e7d32;border:2px solid #a5d6a7}
+
+/* Layer toggle */
+.toggle-wrap{display:flex;justify-content:center;margin:20px 0}
+.toggle-sw{display:flex;background:#f0edf8;border-radius:50px;padding:4px}
+.toggle-opt{padding:8px 24px;border-radius:50px;font-size:.85rem;font-weight:500;cursor:pointer;transition:var(--ease)}
+.toggle-opt.active{background:var(--lav);color:#fff}
+
+/* Comparison table */
+.cmp-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:var(--rs);overflow:hidden;margin:16px 0;font-size:.85rem}
+.cmp-table th{background:#f5f3fa;padding:12px 16px;text-align:left;font-weight:600;border-bottom:2px solid #e8e0f8}
+.cmp-table td{padding:10px 16px;border-bottom:1px solid #f0edf8}
+.cmp-table tr:hover td{background:#faf8ff}
+.cmp-hl{background:rgba(184,169,232,.1)!important}
+
+/* Toast notification */
+.toast-wrap{position:fixed;top:80px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{padding:14px 24px;border-radius:var(--rs);background:var(--bg-card);box-shadow:var(--sh2);display:flex;align-items:center;gap:10px;
+  font-size:.9rem;font-weight:500;animation:slideIn .4s ease;min-width:240px}
+.toast.xp{border-left:4px solid var(--lav)}
+.toast.badge-t{border-left:4px solid var(--mint)}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadeUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+/* Feynman */
+.feynman-q{margin-bottom:20px}
+.feynman-q label{display:block;font-weight:600;font-size:.95rem;margin-bottom:8px}
+.feynman-ta{width:100%;min-height:80px;border:2px solid #e0dce8;border-radius:var(--rs);padding:14px;font-family:inherit;font-size:.9rem;resize:vertical;line-height:1.6}
+.feynman-ta:focus{outline:none;border-color:var(--lav)}
+.feynman-ref{margin-top:8px;padding:12px;background:#f5f3fa;border-radius:var(--rxs);font-size:.85rem;display:none}
+.feynman-ref.show{display:block}
+.rating{display:flex;gap:4px;margin-top:8px}
+.rating-star{font-size:1.2rem;cursor:pointer;color:#ddd;transition:var(--ease)}
+.rating-star.lit{color:#f9c74f}
+
+/* Read button */
+.read-done{text-align:center;margin:24px 0;padding:20px;border:2px dashed #e0dce8;border-radius:var(--rs)}
+.read-done.done{border-color:var(--mint);background:#f0faf5}
+
+/* Radar chart */
+.radar-section{background:var(--bg-card);border-radius:var(--r);box-shadow:var(--sh);padding:40px;margin-top:40px;text-align:center}
+.radar-section h2{margin-bottom:24px;font-size:1.2rem}
+
+/* Footer summary */
+.footer-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:24px}
+.foot-stat{padding:20px;background:#f5f3fa;border-radius:var(--rs);text-align:center}
+.foot-stat .val{font-size:2rem;font-weight:700;background:linear-gradient(135deg,var(--lav),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.foot-stat .label{font-size:.8rem;color:var(--txt2);margin-top:4px}
+
+/* Step cards */
+.step-card{padding:20px;background:var(--bg-card);border:1px solid #eee;border-radius:var(--rs);margin-bottom:12px;transition:var(--ease)}
+.step-card.active{border-color:var(--lav);box-shadow:0 0 0 3px rgba(184,169,232,.15)}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--lav);color:#fff;font-size:.8rem;font-weight:700;margin-right:8px}
+.step-file{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--lav);margin:6px 0}
+.step-nav{display:flex;gap:8px;justify-content:center;margin:16px 0}
+
+/* Responsive */
+@media(max-width:768px){
+  .hamburger{display:block}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:none}
+  .main{margin-left:0;padding:24px 16px 60px}
+  .topbar{padding:0 12px}
+  .quiz-row{flex-direction:column}
+  .dep-diagram{flex-direction:column;gap:8px}
+  .dep-arrow{transform:rotate(90deg)}
+  .opening-box{padding:40px 24px}
+  .opening-box h1{font-size:1.8rem}
+  .cmp-table{font-size:.75rem}
+  .cmp-table th,.cmp-table td{padding:8px 10px}
+}
+</style>
+</head>
+<body>
+
+<div class="opening" id="opening">
+  <div class="opening-box">
+    <div style="font-size:3rem;margin-bottom:16px">🏛️</div>
+    <h1>架構守護者</h1>
+    <p class="sub">你即將成為團隊的架構守護者。<br>每一層的設計決策，都將由你向主管說明。<br><br>透過 7 個章節的互動學習，<br>從 SOLID 原則到費曼驗證，成為真正的架構師。</p>
+    <button class="btn-start" onclick="startJourney()">開始旅程</button>
+  </div>
+</div>
+
+<header class="topbar" id="topbar">
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="logo">🏛 Clean Architecture</div>
+  <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="xp-badge">⚡ <span class="num" id="xp-num">0</span> XP</div>
+  <div class="streak-tag" id="streak-tag" style="display:none"></div>
+  <div class="badge-row" id="badge-row"></div>
+</header>
+
+<nav class="sidebar" id="sidebar"></nav>
+<main class="main" id="main-content"></main>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const DEFAULT_STATE = {
+  currentPart:1, xp:0, completedParts:[], unlockedParts:[1], badges:[],
+  expandedInsights:[], readParts:[], streak:0, lastDate:null,
+  part1Matches:{}, part2Answers:[null,null,null,null], part3Answer:null,
+  part4Order:null, part5Answer:null, part6Code:'', part7Answers:['','','',''],
+  part7Ratings:[0,0,0,0], openingDone:false, briefingsRead:[]
+};
+let S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+function load(){
+  try{ const d=localStorage.getItem('ca-learn'); if(d){const p=JSON.parse(d);Object.assign(S,p)} }catch(e){}
+}
+function save(){ localStorage.setItem('ca-learn',JSON.stringify(S)) }
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const PARTS = [
+  {id:1,title:'SOLID 原則',sub:'Clean Architecture 的地基',icon:'🧱',xpRead:50,xpQuiz:50},
+  {id:2,title:'Dependency Rule',sub:'Clean Architecture 的靈魂',icon:'➡️',xpRead:50,xpQuiz:50},
+  {id:3,title:'同心圓映射',sub:'四層→三層的對應關係',icon:'🗺️',xpRead:50,xpQuiz:50},
+  {id:4,title:'逐層實戰走讀',sub:'10 步資料流完整追蹤',icon:'📖',xpRead:50,xpQuiz:50},
+  {id:5,title:'YT Dev vs Google NIA',sub:'兩大流派深度比較',icon:'⚖️',xpRead:50,xpQuiz:50},
+  {id:6,title:'動手練習',sub:'加入 Use Case 層',icon:'🛠️',xpRead:0,xpQuiz:200},
+  {id:7,title:'費曼驗證',sub:'用自己的話解釋架構',icon:'🎓',xpRead:0,xpQuiz:150}
+];
+const BADGES = [
+  {id:'solid',name:'SOLID 基石',icon:'🧱',req:[1]},
+  {id:'dep',name:'依賴追蹤者',icon:'➡️',req:[2]},
+  {id:'map',name:'架構製圖師',icon:'🗺️',req:[3,4]},
+  {id:'judge',name:'流派鑑定師',icon:'⚖️',req:[5]},
+  {id:'craft',name:'Use Case 工匠',icon:'🛠️',req:[6]},
+  {id:'master',name:'架構師',icon:'🎓',req:[1,2,3,4,5,6,7]}
+];
+const TOTAL_XP = 950;
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function hl(code){
+  let c = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return c.replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*")|(@\w+)|(\b(?:class|data|fun|val|var|suspend|operator|sealed|interface|import|package|override|private|return|if|else|when|object|open|abstract|is|in|internal|enum|null|true|false|by|inline|typealias|out)\b)|(\b(?:String|Int|Double|Boolean|List|Flow|Result|Unit|Long|CoinDataSource|Coin|CoinPrice|CoinDto|CoinPriceDto|NetworkError|CoinUi|CoinListState|DisplayableNumber|HttpClient|ZonedDateTime|Error|DomainError)\b)/gm,
+    (m,cm,st,an,kw,ty)=>{
+      if(cm)return'<span class="hl-cm">'+cm+'</span>';if(st)return'<span class="hl-st">'+st+'</span>';
+      if(an)return'<span class="hl-an">'+an+'</span>';if(kw)return'<span class="hl-kw">'+kw+'</span>';
+      if(ty)return'<span class="hl-ty">'+ty+'</span>';return m;
+    });
+}
+function codeBlock(code){ return '<div class="code-wrap"><code>'+hl(code)+'</code></div>' }
+function updateStreak(){
+  const today=new Date().toISOString().split('T')[0];
+  if(S.lastDate===today)return;
+  const y=new Date(Date.now()-864e5).toISOString().split('T')[0];
+  S.streak = S.lastDate===y ? S.streak+1 : 1;
+  S.lastDate=today; save();
+}
+function showToast(text,type='xp'){
+  const w=document.getElementById('toast-wrap');
+  const t=document.createElement('div');t.className='toast '+type;t.textContent=text;
+  w.appendChild(t);setTimeout(()=>t.remove(),3000);
+}
+
+// ============================================================
+// GAMIFICATION
+// ============================================================
+function addXP(amount,msg){
+  S.xp=Math.min(S.xp+amount,TOTAL_XP);save();
+  showToast('+'+ amount+' XP — '+msg,'xp');
+  renderTopbar();
+}
+function checkBadges(){
+  BADGES.forEach(b=>{
+    if(S.badges.includes(b.id))return;
+    if(b.req.every(r=>S.completedParts.includes(r))){
+      S.badges.push(b.id);save();
+      showToast(b.icon+' 獲得徽章：'+b.name,'badge-t');
+    }
+  });
+  renderTopbar();renderSidebar();
+}
+function markRead(partId){
+  if(S.readParts.includes(partId))return;
+  const p=PARTS.find(x=>x.id===partId);
+  S.readParts.push(partId);save();
+  if(p.xpRead>0)addXP(p.xpRead,'完成 Part '+partId+' 閱讀');
+  render();
+}
+function completePart(partId){
+  if(S.completedParts.includes(partId))return;
+  const p=PARTS.find(x=>x.id===partId);
+  S.completedParts.push(partId);
+  const next=partId+1;
+  if(next<=7&&!S.unlockedParts.includes(next))S.unlockedParts.push(next);
+  save();
+  if(p.xpQuiz>0)addXP(p.xpQuiz,'通過 Part '+partId+' 測驗');
+  checkBadges();render();
+}
+function expandInsight(id){
+  const body=document.getElementById('insight-body-'+id);
+  if(!body)return;
+  body.classList.toggle('open');
+  if(body.classList.contains('open')&&!S.expandedInsights.includes(id)){
+    S.expandedInsights.push(id);save();addXP(25,'展開深入了解');
+  }
+}
+function markBriefingRead(partId){
+  if(!S.briefingsRead.includes(partId)){S.briefingsRead.push(partId);save();}
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function render(){renderTopbar();renderSidebar();renderMain();}
+
+function renderTopbar(){
+  const pct=Math.round(S.completedParts.length/7*100);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('xp-num').textContent=S.xp;
+  const br=document.getElementById('badge-row');
+  br.innerHTML=BADGES.map(b=>'<div class="badge-icon'+(S.badges.includes(b.id)?' earned':'')+'" title="'+b.name+'">'+b.icon+'</div>').join('');
+  const st=document.getElementById('streak-tag');
+  if(S.streak>0){st.style.display='';st.textContent='🔥 連續 '+S.streak+' 天';}
+}
+
+function renderSidebar(){
+  const sb=document.getElementById('sidebar');
+  sb.innerHTML='<h3>章節</h3>'+PARTS.map(p=>{
+    const locked=!S.unlockedParts.includes(p.id);
+    const done=S.completedParts.includes(p.id);
+    const active=S.currentPart===p.id;
+    let cls='side-item';if(active)cls+=' active';if(done)cls+=' completed';if(locked)cls+=' locked';
+    return '<div class="'+cls+'" onclick="'+(locked?'':'navigateTo('+p.id+')')+'">'+
+      '<span>'+p.icon+'</span><span>Part '+p.id+'</span><span style="flex:1;font-size:.8rem;color:var(--txt2)">'+p.title+'</span>'+
+      (locked?'<span class="lock">🔒</span>':'')+'</div>';
+  }).join('')+'<div class="side-sep"></div><h3>成就</h3><div class="side-badges">'+
+  BADGES.map(b=>'<span class="side-badge'+(S.badges.includes(b.id)?' earned':'')+'" title="'+b.name+'">'+b.icon+'</span>').join('')+
+  '</div><div class="side-sep"></div><div class="side-stats">'+
+  '📊 進度：'+S.completedParts.length+' / 7<br>⚡ XP：'+S.xp+' / '+TOTAL_XP+
+  '<br>🏅 徽章：'+S.badges.length+' / '+BADGES.length+'</div>';
+}
+
+function renderMain(){
+  const c=document.getElementById('main-content');
+  const fns=[null,getPart1,getPart2,getPart3,getPart4,getPart5,getPart6,getPart7];
+  const fn=fns[S.currentPart];
+  c.innerHTML=fn?fn():'';
+  c.innerHTML+=getRadarHTML();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function navigateTo(id){
+  if(!S.unlockedParts.includes(id))return;
+  S.currentPart=id;save();render();
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+}
+function startJourney(){
+  S.openingDone=true;save();
+  document.getElementById('opening').classList.add('hide');
+  setTimeout(()=>document.getElementById('opening').style.display='none',800);
+}
+
+// ============================================================
+// PART 1: SOLID 原則
+// ============================================================
+function getPart1(){
+  const done=S.completedParts.includes(1);
+  const read=S.readParts.includes(1);
+  const solidData=[
+    {letter:'S',name:'Single Responsibility Principle',zh:'單一職責原則',
+     desc:'每個類別只有一個改變的理由。<code>Coin.kt</code> 只因業務欄位變更而改，<code>CoinDto.kt</code> 只因 API 格式變更而改，<code>CoinMapper.kt</code> 只因轉換邏輯變更而改。',
+     code:'// Domain 層 - 純粹的業務模型\ndata class Coin(\n    val id: String,\n    val rank: Int,\n    val name: String,\n    val symbol: String,\n    val marketCapUsd: Double,\n    val priceUsd: Double,\n    val changePercent24Hr: Double,\n)\n\n// Data 層 - 對應 API JSON\nimport kotlinx.serialization.Serializable\n\n@Serializable\ndata class CoinDto(\n    val id: String,\n    val rank: Int,\n    val name: String,\n    // ... 帶有序列化標記\n)'},
+    {letter:'O',name:'Open/Closed Principle',zh:'開放封閉原則',
+     desc:'對擴展開放，對修改封閉。<code>Result&lt;D, E&gt;</code> 是 sealed interface — 目前有 <code>Success</code> 和 <code>Error</code>，未來要加 <code>Loading</code> 只需新增子類別，不用改現有程式碼。',
+     code:'typealias DomainError = Error\n\nsealed interface Result<out D, out E: Error> {\n    data class Success<out D>(val data: D): Result<D, Nothing>\n    data class Error<out E: DomainError>(val error: E): Result<Nothing, E>\n}'},
+    {letter:'L',name:'Liskov Substitution Principle',zh:'里氏替換原則',
+     desc:'子型別必須可以替換父型別。<code>RemoteCoinDataSource</code> 實作 <code>CoinDataSource</code> 介面，ViewModel 透過介面呼叫 — 可以無縫替換為 <code>LocalCoinDataSource</code> 或 <code>FakeCoinDataSource</code>。',
+     code:'// ViewModel 只認介面\nclass CoinListViewModel(\n    private val coinDataSource: CoinDataSource  // 介面\n) : ViewModel()\n\n// DI 在執行時綁定具體實作\nsingleOf(::RemoteCoinDataSource).bind<CoinDataSource>()'},
+    {letter:'I',name:'Interface Segregation Principle',zh:'介面隔離原則',
+     desc:'不要強迫客戶端依賴它不需要的方法。<code>Error</code> 是空的標記介面，<code>NetworkError</code> 繼承它但只定義網路相關的錯誤，不被迫實作不相關的方法。',
+     code:'interface Error  // 空標記介面\n\nenum class NetworkError: Error {\n    REQUEST_TIMEOUT,\n    TOO_MANY_REQUESTS,\n    NO_INTERNET,\n    SERVER_ERROR,\n    SERIALIZATION,\n    UNKNOWN,\n}'},
+    {letter:'D',name:'Dependency Inversion Principle',zh:'依賴反轉原則',
+     desc:'高層模組定義介面（契約），低層模組負責實作。<code>CoinDataSource</code> 介面定義在 Domain 層（高層），<code>RemoteCoinDataSource</code> 在 Data 層（低層）實作。',
+     code:'// Domain 層定義「我需要什麼」\ninterface CoinDataSource {\n    suspend fun getCoins(): Result<List<Coin>, NetworkError>\n    suspend fun getCoinHistory(\n        coinId: String,\n        start: ZonedDateTime,\n        end: ZonedDateTime\n    ): Result<List<CoinPrice>, NetworkError>\n}\n\n// Data 層實作「怎麼做到」\nclass RemoteCoinDataSource(\n    private val httpClient: HttpClient\n): CoinDataSource { ... }'}
+  ];
+
+  let html='<div class="part-hdr"><span class="tag">Part 1</span><h1>🧱 SOLID 原則 — Clean Architecture 的地基</h1>'+
+    '<p class="desc">Clean Architecture 建立在 SOLID 原則之上。以 CryptoTracker 的實際程式碼，逐一理解每個原則如何被實踐。</p></div>';
+
+  // Accordion
+  solidData.forEach((s,i)=>{
+    html+='<div class="accordion"><button class="acc-head" onclick="toggleAcc(this)">'+
+      '<span><strong style="color:var(--lav)">'+s.letter+'</strong> — '+s.zh+'（'+s.name+'）</span>'+
+      '<span class="arrow">▼</span></button>'+
+      '<div class="acc-body"><div class="acc-inner"><p>'+s.desc+'</p>'+codeBlock(s.code)+'</div></div></div>';
+  });
+
+  // Insight
+  html+=insightBlock(1,'SOLID 不是 Clean Architecture 的全部，但違反 SOLID 的架構一定不 Clean。Robert C. Martin 正是 SOLID 的提出者，所以 Clean Architecture 是 SOLID 原則的系統性應用——從類別層級推廣到系統層級。');
+
+  // Read button
+  if(!read) html+='<div class="read-done"><button class="btn btn-sec" onclick="markRead(1)">✓ 我讀完了（+50 XP）</button></div>';
+  else html+='<div class="read-done done">✓ 已完成閱讀</div>';
+
+  // Quiz
+  html+=getQuiz1HTML(done);
+
+  // Briefing
+  html+=briefCard(1,'SOLID 原則',[
+    '我們的專案遵循 SOLID 原則，每個檔案有清楚的單一職責（Coin vs CoinDto vs CoinMapper），降低修改風險',
+    '透過 sealed interface（Result）和介面抽象（CoinDataSource），系統對擴展開放、對修改封閉',
+    '最關鍵的是依賴反轉——Domain 層定義介面，Data 層實作，核心業務邏輯不受技術細節綁架'
+  ],'為什麼 Coin 和 CoinDto 長得幾乎一樣還要分開？','因為它們的變更原因不同。API 格式變了只改 CoinDto，業務需求變了只改 Coin，這就是單一職責原則的價值。');
+
+  return html;
+}
+
+function getQuiz1HTML(done){
+  const descs=['Coin.kt 和 CoinDto.kt 分開，各有單一職責','Result sealed interface 可擴展而不改現有程式碼',
+    'RemoteCoinDataSource 可替換任何 CoinDataSource','Error 標記介面不強迫實作不相關方法','CoinDataSource 介面定義在 Domain 層（高層）'];
+  const correct={S:0,O:1,L:2,I:3,D:4};
+  const letters=['S','O','L','I','D'];
+
+  let h='<div class="quiz-box"><h3>✅ 小測驗：SOLID 配對</h3><p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">將每個 SOLID 字母配對到正確的 CryptoTracker 概念</p>';
+  letters.forEach(l=>{
+    const sel=S.part1Matches[l];
+    h+='<div class="quiz-row"><span class="quiz-tag" style="font-weight:700;background:var(--lav);color:#fff;cursor:default">'+l+'</span>'+
+      '<select class="quiz-select" onchange="setPart1Match(\''+l+'\',this.value)"'+(done?' disabled':'')+'><option value="">— 選擇配對 —</option>';
+    descs.forEach((d,i)=>{ h+='<option value="'+i+'"'+(sel==i?' selected':'')+'>'+d+'</option>' });
+    h+='</select></div>';
+  });
+  if(!done) h+='<button class="btn btn-pri" onclick="checkQuiz1()" style="margin-top:16px">確認答案</button>';
+  h+='<div id="quiz1-result"></div>';
+  if(done) h+='<div class="quiz-result pass">✅ 已通過！所有配對正確。</div>';
+  h+='</div>';
+  return h;
+}
+function setPart1Match(l,v){S.part1Matches[l]=v===''?null:parseInt(v);save();}
+function checkQuiz1(){
+  const correct={S:0,O:1,L:2,I:3,D:4};
+  const ok=Object.keys(correct).every(l=>S.part1Matches[l]===correct[l]);
+  const el=document.getElementById('quiz1-result');
+  if(ok){el.innerHTML='<div class="quiz-result pass">🎉 全部正確！</div>';completePart(1);}
+  else el.innerHTML='<div class="quiz-result fail">❌ 有些配對不正確，再想想看！</div>';
+}
+
+// ============================================================
+// PART 2: Dependency Rule
+// ============================================================
+function getPart2(){
+  const done=S.completedParts.includes(2),read=S.readParts.includes(2);
+  let h='<div class="part-hdr"><span class="tag">Part 2</span><h1>➡️ Dependency Rule — Clean Architecture 的靈魂</h1>'+
+    '<p class="desc">「Clean Architecture 可以只用一條規則來總結——The Dependency Rule。」所有原始碼依賴方向必須只能指向內部。</p></div>';
+
+  // Dependency diagram
+  h+='<div class="glass-card"><h3 style="margin-bottom:16px">依賴方向圖</h3>'+
+    '<div class="dep-diagram">'+
+    '<div class="dep-layer dep-outer">Presentation 層<div style="font-size:.75rem;margin-top:4px">CoinListViewModel</div></div>'+
+    '<div class="dep-arrow">→</div>'+
+    '<div class="dep-layer dep-inner" style="border-width:3px">Domain 層（核心）<div style="font-size:.75rem;margin-top:4px">Coin, CoinDataSource</div></div>'+
+    '<div class="dep-arrow">←</div>'+
+    '<div class="dep-layer dep-mid">Data 層<div style="font-size:.75rem;margin-top:4px">RemoteCoinDataSource</div></div>'+
+    '</div>'+
+    '<p style="text-align:center;color:var(--txt2);font-size:.85rem;margin-top:12px">箭頭方向 = import 依賴方向，永遠指向 Domain 核心</p></div>';
+
+  // Evidence
+  h+='<div class="glass-card"><h3 style="margin-bottom:12px">證據：追蹤每個檔案的 import</h3>';
+  h+='<div style="margin-bottom:16px"><strong style="color:#2e7d32">Domain 層（零外部依賴）</strong>'+
+    codeBlock('// Coin.kt — 完全沒有 import！\ndata class Coin(\n    val id: String,\n    val rank: Int,\n    ...  // 全部屬性都在 domain 層，零依賴\n)\n\n// CoinDataSource.kt — 只 import Domain 自己的型別\nimport com.plcoding.cryptotracker.core.domain.util.NetworkError\nimport com.plcoding.cryptotracker.core.domain.util.Result\nimport java.time.ZonedDateTime')+'</div>';
+  h+='<div style="margin-bottom:16px"><strong style="color:#1565c0">Data 層（依賴 Domain ✅ 不依賴 Presentation ✅）</strong>'+
+    codeBlock('// RemoteCoinDataSource.kt 的 import\nimport com.plcoding.cryptotracker.core.domain.util.Result      // → Domain ✅\nimport com.plcoding.cryptotracker.core.domain.util.map         // → Domain ✅\nimport com.plcoding.cryptotracker.crypto.domain.Coin           // → Domain ✅\nimport com.plcoding.cryptotracker.crypto.domain.CoinDataSource // → Domain ✅\nimport com.plcoding.cryptotracker.crypto.data.mappers.toCoin   // → 同層 Data ✅\n// 沒有任何 crypto.presentation.* 的 import ✅')+'</div>';
+  h+='<div><strong style="color:#c62828">Presentation 層（依賴 Domain ✅ 不依賴 Data ✅）</strong>'+
+    codeBlock('// CoinListViewModel.kt\nimport com.plcoding.cryptotracker.crypto.domain.CoinDataSource // → Domain 介面 ✅\n// 不是 import RemoteCoinDataSource（Data 層）')+'</div></div>';
+
+  h+=insightBlock(2,'Dependency Rule 的威力：當你需要替換資料庫（如從 Room 換成 DataStore），只要新的實作遵守 CoinDataSource 介面，Domain 層和 Presentation 層完全不用動。這就是「穩定性原則」——越內層越穩定，越不常改變。');
+
+  if(!read) h+='<div class="read-done"><button class="btn btn-sec" onclick="markRead(2)">✓ 我讀完了（+50 XP）</button></div>';
+  else h+='<div class="read-done done">✓ 已完成閱讀</div>';
+
+  // Quiz: True/False
+  const tfQ=[
+    {code:'CoinListViewModel import CoinDataSource',ans:true,explain:'Presentation → Domain，合法'},
+    {code:'Coin.kt import @Serializable',ans:false,explain:'Domain 不該依賴序列化框架'},
+    {code:'CoinMapper import CoinDto 和 Coin',ans:true,explain:'Data 層可以依賴 Domain 層'},
+    {code:'CoinDataSource import RemoteCoinDataSource',ans:false,explain:'Domain 不可依賴 Data 層'}
+  ];
+  h+='<div class="quiz-box"><h3>✅ 小測驗：判斷 import 是否合法</h3>';
+  tfQ.forEach((q,i)=>{
+    const a=S.part2Answers[i];
+    h+='<div class="tf-row"><code class="tf-code">'+q.code+'</code><div class="tf-btns">'+
+      '<button class="tf-btn'+(a===true?' sel-t':'')+'" onclick="setPart2('+i+',true)"'+(done?' disabled':'')+'>✅ 合法</button>'+
+      '<button class="tf-btn'+(a===false?' sel-f':'')+'" onclick="setPart2('+i+',false)"'+(done?' disabled':'')+'>❌ 違反</button></div></div>';
+  });
+  if(!done) h+='<button class="btn btn-pri" onclick="checkQuiz2()" style="margin-top:16px">確認答案</button>';
+  h+='<div id="quiz2-result"></div>';
+  if(done) h+='<div class="quiz-result pass">✅ 已通過！你已掌握 Dependency Rule。</div>';
+  h+='</div>';
+
+  h+=briefCard(2,'Dependency Rule',[
+    '所有程式碼依賴方向只能指向內部——Presentation → Domain ← Data',
+    'Domain 層零外部依賴，核心業務邏輯可獨立測試、獨立部署',
+    '介面定義在 Domain 層，確保高層模組不依賴低層實作'
+  ],'這樣分層不會增加開發成本嗎？','短期多寫幾個檔案，但長期 Data 層替換（如改用 Room 快取）完全不影響 ViewModel 和 Domain 層。這是架構的投資報酬率。');
+  return h;
+}
+function setPart2(i,v){S.part2Answers[i]=v;save();render();}
+function checkQuiz2(){
+  const ans=[true,false,true,false];
+  const ok=ans.every((a,i)=>S.part2Answers[i]===a);
+  const el=document.getElementById('quiz2-result');
+  if(ok){el.innerHTML='<div class="quiz-result pass">🎉 全部正確！</div>';completePart(2);}
+  else el.innerHTML='<div class="quiz-result fail">❌ 有些判斷不正確。提示：Domain 層不可依賴外層的任何東西。</div>';
+}
+
+// ============================================================
+// PART 3: 同心圓映射
+// ============================================================
+function getPart3(){
+  const done=S.completedParts.includes(3),read=S.readParts.includes(3);
+  const view=S.part3View||'uncle';
+  let h='<div class="part-hdr"><span class="tag">Part 3</span><h1>🗺️ 同心圓映射 — 四層→三層</h1>'+
+    '<p class="desc">Uncle Bob 的經典四層如何對應到 Android 社群常用的三層架構？關鍵不在幾層，而在 Dependency Rule。</p></div>';
+
+  h+='<div class="glass-card"><div class="toggle-wrap"><div class="toggle-sw">'+
+    '<div class="toggle-opt'+(view==='uncle'?' active':'')+'" onclick="setView(\'uncle\')">Uncle Bob 四層</div>'+
+    '<div class="toggle-opt'+(view!=='uncle'?' active':'')+'" onclick="setView(\'android\')">Android 三層</div></div></div>';
+
+  if(view==='uncle'){
+    h+='<div style="display:flex;flex-direction:column;gap:8px;margin:16px 0">'+
+      '<div style="padding:16px;background:#e8f5e9;border-radius:var(--rs);border:2px solid #a5d6a7;text-align:center">'+
+      '<strong>1. Entities（實體）</strong><br><span style="font-size:.85rem">Coin.kt, CoinPrice.kt</span></div>'+
+      '<div style="padding:16px;background:#fff3e0;border-radius:var(--rs);border:2px solid #ffcc80;text-align:center">'+
+      '<strong>2. Use Cases（應用層）</strong><br><span style="font-size:.85rem">GetCoinsUseCase（CryptoTracker 原版省略）</span></div>'+
+      '<div style="padding:16px;background:#e3f2fd;border-radius:var(--rs);border:2px solid #90caf9;text-align:center">'+
+      '<strong>3. Interface Adapters（轉接層）</strong><br><span style="font-size:.85rem">CoinMapper, CoinListViewModel, CoinUi</span></div>'+
+      '<div style="padding:16px;background:#fce4ec;border-radius:var(--rs);border:2px solid #ef9a9a;text-align:center">'+
+      '<strong>4. Frameworks & Drivers（最外層）</strong><br><span style="font-size:.85rem">Ktor HttpClient, Jetpack Compose Screen</span></div></div>';
+  } else {
+    h+='<div style="display:flex;flex-direction:column;gap:8px;margin:16px 0">'+
+      '<div style="padding:16px;background:#e8f5e9;border-radius:var(--rs);border:2px solid #a5d6a7;text-align:center">'+
+      '<strong>Domain 層（最內）</strong><br><span style="font-size:.85rem">Coin, CoinPrice, CoinDataSource<br>= Entities + Use Cases</span></div>'+
+      '<div style="padding:16px;background:#e3f2fd;border-radius:var(--rs);border:2px solid #90caf9;text-align:center">'+
+      '<strong>Data 層</strong><br><span style="font-size:.85rem">RemoteCoinDataSource, CoinMapper, CoinDto<br>= 向內的 Interface Adapters + Frameworks</span></div>'+
+      '<div style="padding:16px;background:#fce4ec;border-radius:var(--rs);border:2px solid #ef9a9a;text-align:center">'+
+      '<strong>Presentation 層（最外）</strong><br><span style="font-size:.85rem">CoinListViewModel, CoinUi, Compose Screen<br>= 向外的 Interface Adapters + Frameworks</span></div></div>';
+  }
+  h+='</div>';
+
+  // Mapping table
+  h+='<div class="glass-card"><h3 style="margin-bottom:12px">對照表</h3>'+
+    '<table class="cmp-table"><tr><th>Uncle Bob 四層</th><th>Android 三層</th><th>CryptoTracker</th></tr>'+
+    '<tr><td>Entities</td><td>Domain 層</td><td>Coin.kt, CoinPrice.kt</td></tr>'+
+    '<tr><td>Use Cases</td><td>Domain 層（常省略）</td><td>原版無 Use Case</td></tr>'+
+    '<tr><td>Interface Adapters</td><td>Data + Presentation</td><td>CoinMapper, ViewModel, CoinUi</td></tr>'+
+    '<tr><td>Frameworks & Drivers</td><td>被吸收進 Data/Presentation</td><td>Ktor, Compose</td></tr>'+
+    '</table></div>';
+
+  h+=insightBlock(3,'core/ 目錄橫跨多層（core.domain、core.data、core.presentation），它不是獨立的第四層，而是「每一層的共用部分」。分層原則仍然適用於 core/ 內部的子 package。');
+
+  if(!read) h+='<div class="read-done"><button class="btn btn-sec" onclick="markRead(3)">✓ 我讀完了（+50 XP）</button></div>';
+  else h+='<div class="read-done done">✓ 已完成閱讀</div>';
+
+  // Quiz: MC
+  const opts=['Entities（實體層）','Use Cases（應用層）','Interface Adapters（轉接層）','Frameworks & Drivers（最外層）'];
+  h+='<div class="quiz-box"><h3>✅ 小測驗：選擇題</h3>'+
+    '<p style="margin-bottom:16px;font-weight:600">CoinMapper 屬於 Uncle Bob 的哪一層？</p>';
+  opts.forEach((o,i)=>{
+    const sel=S.part3Answer===i;
+    h+='<div class="quiz-opt'+(sel?' selected':'')+'" onclick="setPart3('+i+')"'+(done?' style="pointer-events:none"':'')+'>'+
+      String.fromCharCode(65+i)+'. '+o+'</div>';
+  });
+  if(!done) h+='<button class="btn btn-pri" onclick="checkQuiz3()" style="margin-top:16px">確認答案</button>';
+  h+='<div id="quiz3-result"></div>';
+  if(done) h+='<div class="quiz-result pass">✅ 已通過！CoinMapper 是轉接層——負責 DTO ↔ Domain 之間的「翻譯」。</div>';
+  h+='</div>';
+
+  h+=briefCard(3,'同心圓映射',[
+    'Uncle Bob 四層架構在 Android 簡化為三層，核心原則不變',
+    'Interface Adapters 被拆分——資料轉接歸 Data 層，UI 轉接歸 Presentation 層',
+    '層數不是重點，Dependency Rule 才是——無論幾層，依賴方向永遠指向內部'
+  ],'我們用三層夠嗎？還是要用四層？','三層足夠。當業務邏輯複雜到需要獨立的 Use Case 層時，再從 Domain 層分出即可。架構是漸進演化的。');
+  return h;
+}
+function setView(v){S.part3View=v;save();render();}
+function setPart3(i){S.part3Answer=i;save();render();}
+function checkQuiz3(){
+  const el=document.getElementById('quiz3-result');
+  if(S.part3Answer===2){el.innerHTML='<div class="quiz-result pass">🎉 正確！CoinMapper 負責在 DTO 和 Domain 之間做翻譯。</div>';completePart(3);}
+  else el.innerHTML='<div class="quiz-result fail">❌ 再想想看。CoinMapper 的功能是什麼？它在哪兩層之間做翻譯？</div>';
+}
+
+// ============================================================
+// PART 4: 逐層走讀 (placeholder - filled next)
+// ============================================================
+function getPart4(){ return PART4_CONTENT(); }
+
+// ============================================================
+// PART 5: YT Dev vs Google NIA (placeholder - filled next)
+// ============================================================
+function getPart5(){ return PART5_CONTENT(); }
+
+// ============================================================
+// PART 6: 動手練習 (placeholder - filled next)
+// ============================================================
+function getPart6(){ return PART6_CONTENT(); }
+
+// ============================================================
+// PART 7: 費曼驗證 (placeholder - filled next)
+// ============================================================
+function getPart7(){ return PART7_CONTENT(); }
+
+// ============================================================
+// SHARED UI HELPERS
+// ============================================================
+function insightBlock(id,text){
+  const opened=S.expandedInsights.includes(id);
+  return '<div class="insight-block"><button class="insight-head" onclick="expandInsight('+id+')">'+
+    '<span>★ 深入了解 '+(opened?'':'<span class="insight-xp">+25 XP</span>')+'</span><span>'+(opened?'▲':'▼')+'</span></button>'+
+    '<div class="insight-body'+(opened?' open':'')+'" id="insight-body-'+id+'"><div class="insight-inner">'+text+'</div></div></div>';
+}
+
+function briefCard(part,title,points,q,a){
+  return '<div class="brief-card" onclick="markBriefingRead('+part+')"><h3>💼 向主管簡報 — Part '+part+': '+title+'</h3>'+
+    points.map(p=>'<div class="brief-point"><span class="pin">📌</span><span>'+p+'</span></div>').join('')+
+    '<div class="brief-qa"><div class="q">💡 如果主管問：「'+q+'」</div><div>你可以回答：「'+a+'」</div></div></div>';
+}
+
+function toggleAcc(btn){
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open');
+}
+
+// ============================================================
+// RADAR CHART (Octalysis)
+// ============================================================
+function getRadarHTML(){
+  const drives=[
+    {name:'使命感',val:S.openingDone?1:0},
+    {name:'成就感',val:Math.min(S.xp/TOTAL_XP,1)},
+    {name:'創造力',val:S.completedParts.includes(6)?1:0},
+    {name:'擁有感',val:S.badges.length/BADGES.length},
+    {name:'社交影響',val:S.briefingsRead.length/7},
+    {name:'稀缺性',val:S.unlockedParts.length/7},
+    {name:'好奇心',val:S.expandedInsights.length/4},
+    {name:'避損心理',val:S.streak>0?Math.min(S.streak/7,1):0}
+  ];
+  const cx=150,cy=150,r=110;
+  let pts=[],labelHtml='';
+  drives.forEach((d,i)=>{
+    const angle=-Math.PI/2+i*Math.PI/4;
+    const x=cx+r*Math.cos(angle),y=cy+r*Math.sin(angle);
+    const vx=cx+r*d.val*Math.cos(angle),vy=cy+r*d.val*Math.sin(angle);
+    pts.push(vx+','+vy);
+    const lx=cx+(r+25)*Math.cos(angle),ly=cy+(r+25)*Math.sin(angle);
+    labelHtml+='<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#8E8A9E">'+d.name+'</text>';
+    labelHtml+='<line x1="'+cx+'" y1="'+cy+'" x2="'+x+'" y2="'+y+'" stroke="#e0dce8" stroke-width="1"/>';
+  });
+  // Grid
+  let gridHtml='';
+  [0.25,0.5,0.75,1].forEach(s=>{
+    let gp=[];
+    for(let i=0;i<8;i++){const a=-Math.PI/2+i*Math.PI/4;gp.push((cx+r*s*Math.cos(a))+','+(cy+r*s*Math.sin(a)))}
+    gridHtml+='<polygon points="'+gp.join(' ')+'" fill="none" stroke="#e0dce8" stroke-width="0.5"/>';
+  });
+
+  return '<div class="radar-section"><h2>八角遊戲化框架（Octalysis）</h2>'+
+    '<svg viewBox="0 0 300 300" width="300" height="300" style="max-width:100%">'+gridHtml+labelHtml+
+    '<polygon points="'+pts.join(' ')+'" fill="rgba(184,169,232,0.2)" stroke="var(--lav)" stroke-width="2"/></svg>'+
+    '<div class="footer-summary">'+
+    '<div class="foot-stat"><div class="val">'+S.completedParts.length+'/7</div><div class="label">完成章節</div></div>'+
+    '<div class="foot-stat"><div class="val">'+S.xp+'</div><div class="label">總 XP</div></div>'+
+    '<div class="foot-stat"><div class="val">'+S.badges.length+'</div><div class="label">徽章</div></div>'+
+    '<div class="foot-stat"><div class="val">'+Math.round(S.completedParts.length/7*100)+'%</div><div class="label">完成率</div></div>'+
+    '</div></div>';
+}
+
+// ============================================================
+// PART 4-7 CONTENT (to be filled)
+// ============================================================
+function PART4_CONTENT(){
+  const done=S.completedParts.includes(4),read=S.readParts.includes(4);
+  let h='<div class="part-hdr"><span class="tag">Part 4</span><h1>📖 逐層實戰走讀</h1><p class="desc">追蹤一次「取得幣種清單」從使用者操作到 API 回傳的完整 10 步資料流。</p></div>';
+  const steps=[
+    {n:1,file:'Coin.kt',title:'Entity — 純粹業務模型',desc:'data class，零 import、零框架依賴。用 Double 儲存金額，格式化是 UI 的事。'},
+    {n:2,file:'CoinDataSource.kt',title:'Repository 介面',desc:'定義在 Domain 層。回傳 Domain 的 Coin，不是 CoinDto。用自定義 Result<D, E> 而非拋 Exception。'},
+    {n:3,file:'Result.kt',title:'型別安全錯誤處理',desc:'sealed interface 保證 when 不需要 else。雙泛型 <D, E> 讓成功和錯誤都有型別。'},
+    {n:4,file:'CoinDto.kt',title:'DTO 數據傳輸物件',desc:'@Serializable 標記是 Data 層的技術細節。DTO 住在 data/networking/dto/。'},
+    {n:5,file:'CoinMapper.kt',title:'Mapper 轉換層',desc:'擴展函式 CoinDto.toCoin()——Kotlin 慣用寫法。方向永遠是 Data → Domain。'},
+    {n:6,file:'RemoteCoinDataSource.kt',title:'實作 DataSource',desc:'實作 CoinDataSource 介面。safeCall 包裝 + map 轉換 DTO → Domain Model。'},
+    {n:7,file:'CoinUi.kt',title:'UI Model',desc:'Double 變 DisplayableNumber（含格式化字串）。多了 @DrawableRes iconRes。'},
+    {n:8,file:'CoinListState.kt',title:'UI State',desc:'@Immutable Compose 優化標記。使用 CoinUi 不是 Coin——每層用自己的語言。'},
+    {n:9,file:'CoinListViewModel.kt',title:'ViewModel',desc:'建構參數是介面 CoinDataSource。在 onSuccess 裡呼叫 toCoinUi() 轉換。'},
+    {n:10,file:'AppModule.kt',title:'DI 串接',desc:'singleOf(::RemoteCoinDataSource).bind<CoinDataSource>() 是整個架構的黏合劑。'}
+  ];
+  steps.forEach(s=>{
+    h+='<div class="step-card"><span class="step-num">'+s.n+'</span><strong>'+s.title+'</strong>'+
+      '<div class="step-file">'+s.file+'</div><p style="font-size:.9rem;color:var(--txt2)">'+s.desc+'</p></div>';
+  });
+
+  h+=insightBlock(4,'資料轉換三次（DTO → Domain → UI Model）看似浪費，但如果 API 格式變了，你只需要改 CoinDto 和 CoinMapper，ViewModel 和 Screen 完全不受影響。這就是 Clean Architecture 的投資報酬率。');
+
+  if(!read) h+='<div class="read-done"><button class="btn btn-sec" onclick="markRead(4)">✓ 我讀完了（+50 XP）</button></div>';
+  else h+='<div class="read-done done">✓ 已完成閱讀</div>';
+
+  // Sort quiz
+  const correctOrder=[0,1,2,3,4,5,6,7];
+  const labels=['使用者點擊 Screen','ViewModel 呼叫 CoinDataSource 介面','DI 注入 RemoteCoinDataSource','Ktor HttpClient 呼叫 API',
+    'CoinMapper 將 CoinDto 轉為 Coin','ViewModel 收到 Result<List<Coin>>','toCoinUi() 轉為 CoinUi','Screen 根據 State 渲染更新'];
+  if(!S.part4Order||S.part4Order.length!==8) {S.part4Order=[3,6,1,4,7,0,2,5];save();}
+
+  h+='<div class="quiz-box"><h3>✅ 小測驗：排列資料流順序</h3><p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">用 ▲ ▼ 按鈕將步驟排成正確順序</p>';
+  S.part4Order.forEach((idx,pos)=>{
+    h+='<div class="sort-item"><span class="num">'+(pos+1)+'</span><span class="text">'+labels[idx]+'</span>'+
+      (!done?'<button class="sort-btn" onclick="movePart4('+pos+',-1)">▲</button><button class="sort-btn" onclick="movePart4('+pos+',1)">▼</button>':'')+
+      '</div>';
+  });
+  if(!done) h+='<button class="btn btn-pri" onclick="checkQuiz4()" style="margin-top:16px">確認順序</button>';
+  h+='<div id="quiz4-result"></div>';
+  if(done) h+='<div class="quiz-result pass">✅ 已通過！你掌握了完整的資料流。</div>';
+  h+='</div>';
+
+  h+=briefCard(4,'逐層走讀',[
+    '一次 API 請求經過 10 個檔案，資料在每層被「翻譯」成該層的語言（DTO → Domain → UI Model）',
+    '每層之間的 Mapper 確保各層可獨立變更而不互相影響',
+    'DI（Koin）是整個架構的黏合劑——在 AppModule 將介面與實作綁定'
+  ],'資料流經這麼多層不會影響效能嗎？','物件轉換在記憶體中完成，幾乎零成本。真正的效能瓶頸在網路請求和資料庫查詢，不在架構層級。');
+  return h;
+}
+function movePart4(pos,dir){
+  const np=pos+dir;
+  if(np<0||np>=S.part4Order.length)return;
+  [S.part4Order[pos],S.part4Order[np]]=[S.part4Order[np],S.part4Order[pos]];
+  save();render();
+}
+function checkQuiz4(){
+  const ok=S.part4Order.every((v,i)=>v===i);
+  const el=document.getElementById('quiz4-result');
+  if(ok){el.innerHTML='<div class="quiz-result pass">🎉 完美排序！</div>';completePart(4);}
+  else el.innerHTML='<div class="quiz-result fail">❌ 順序不對。提示：從使用者操作開始，到 Screen 渲染結束。</div>';
+}
+
+function PART5_CONTENT(){
+  const done=S.completedParts.includes(5),read=S.readParts.includes(5);
+  let h='<div class="part-hdr"><span class="tag">Part 5</span><h1>⚖️ YT Dev vs Google NIA</h1><p class="desc">兩大 Clean Architecture 流派的 6 大差異深度比較——沒有「正確答案」，只有「適合的選擇」。</p></div>';
+
+  const cmps=[
+    {cat:'模組策略',yt:'單模組，用 package 分層。分層靠開發者自律。',nia:'多模組，每層/每 feature 一個 Gradle module。Gradle 編譯期強制依賴方向。'},
+    {cat:'Repository 位置',yt:'介面定義在 Domain 層（遵循 DIP）',nia:'介面定義在 Data 層（認為 Repository 是 Data 的抽象）'},
+    {cat:'Use Case 層',yt:'省略。ViewModel 直接呼叫 DataSource。',nia:'大量使用。ViewModel → UseCase → Repository。'},
+    {cat:'錯誤處理',yt:'自定義 Result&lt;D, E&gt; sealed interface——型別安全',nia:'Kotlin 內建 Exception + try/catch——簡潔'},
+    {cat:'UI 模型',yt:'專用 CoinUi UI Model，與 Domain 完全分離',nia:'通常直接用 Domain Model'},
+    {cat:'DI 框架',yt:'Koin（純 Kotlin DSL，runtime 解析）',nia:'Hilt（基於 Dagger，compile-time 驗證）'}
+  ];
+
+  h+='<div class="glass-card"><table class="cmp-table"><tr><th>面向</th><th style="color:var(--lav)">YT Dev（CryptoTracker）</th><th style="color:var(--pink)">Google NIA</th></tr>';
+  cmps.forEach(c=>{h+='<tr><td><strong>'+c.cat+'</strong></td><td>'+c.yt+'</td><td>'+c.nia+'</td></tr>'});
+  h+='<tr style="background:#f5f3fa"><td><strong>適合</strong></td><td>快速開發、小團隊、學習</td><td>大型專案、多團隊、長期維護</td></tr></table></div>';
+
+  h+=insightBlock(5,'Google NIA 專案有超過 60 個 Gradle module。每個 module 的 build.gradle 都有明確的依賴宣告，編譯器在 build time 就會告訴你是否違反了 Dependency Rule——比靠 code review 可靠得多。');
+
+  if(!read) h+='<div class="read-done"><button class="btn btn-sec" onclick="markRead(5)">✓ 我讀完了（+50 XP）</button></div>';
+  else h+='<div class="read-done done">✓ 已完成閱讀</div>';
+
+  // Scenario quiz
+  const opts=['YT Dev 單模組風格 — 簡單但容易失控','Google NIA 多模組風格 — 編譯期強制依賴方向','不需要 Clean Architecture，直接寫就好'];
+  h+='<div class="quiz-box"><h3>✅ 小測驗：情境題</h3>'+
+    '<p style="margin-bottom:16px;font-weight:600">你的團隊有 15 人，需要維護 50+ feature，適合哪種風格？</p>';
+  opts.forEach((o,i)=>{
+    const sel=S.part5Answer===i;
+    h+='<div class="quiz-opt'+(sel?' selected':'')+'" onclick="setPart5('+i+')"'+(done?' style="pointer-events:none"':'')+'>'+String.fromCharCode(65+i)+'. '+o+'</div>';
+  });
+  if(!done) h+='<button class="btn btn-pri" onclick="checkQuiz5()" style="margin-top:16px">確認答案</button>';
+  h+='<div id="quiz5-result"></div>';
+  if(done) h+='<div class="quiz-result pass">✅ 已通過！大團隊需要編譯期的強制保障。</div>';
+  h+='</div>';
+
+  h+=briefCard(5,'兩大流派比較',[
+    'YT Dev 風格適合小團隊快速開發，Google NIA 適合大團隊長期維護',
+    '模組化的真正價值：Gradle 依賴設定能「編譯期強制」Dependency Rule',
+    '沒有「正確的 Clean Architecture」，只有「適合你團隊的」'
+  ],'我們現在該選哪種？','建議先用 YT Dev 風格快速驗證，等團隊超過 5 人或業務邏輯複雜時，再漸進引入 Use Case 和多模組。');
+  return h;
+}
+function setPart5(i){S.part5Answer=i;save();render();}
+function checkQuiz5(){
+  const el=document.getElementById('quiz5-result');
+  if(S.part5Answer===1){el.innerHTML='<div class="quiz-result pass">🎉 正確！15 人團隊需要模組化來強制架構規範。</div>';completePart(5);}
+  else el.innerHTML='<div class="quiz-result fail">❌ 再想想——15 人團隊如果只靠自律，Dependency Rule 很容易被打破。</div>';
+}
+
+function PART6_CONTENT(){
+  const done=S.completedParts.includes(6);
+  let h='<div class="part-hdr"><span class="tag">Part 6</span><h1>🛠️ 動手練習 — 加入 Use Case 層</h1><p class="desc">在 CryptoTracker 中實作 GetCoinsUseCase，體驗 Google NIA 風格。完成後獲得 200 XP！</p></div>';
+
+  h+='<div class="glass-card"><h3 style="margin-bottom:12px">📋 任務說明</h3>'+
+    '<p style="margin-bottom:12px">實作 <code>GetCoinsUseCase</code>：從 CoinDataSource 取得幣種列表，並篩選出 rank ≤ 50 的幣種。</p>'+
+    '<p style="margin-bottom:16px;color:var(--txt2);font-size:.85rem">需要包含：<code>operator fun invoke()</code>、<code>suspend</code>、<code>filter</code>、結果轉換</p>';
+
+  h+='<h4 style="margin-bottom:8px">骨架程式碼：</h4>';
+  h+=codeBlock('class GetCoinsUseCase(\n    private val coinDataSource: CoinDataSource\n) {\n    // 你的程式碼寫在下方編輯器\n}');
+
+  h+='<h4 style="margin:16px 0 8px">提示：</h4>';
+  h+='<div class="accordion"><button class="acc-head" onclick="toggleAcc(this)"><span>💡 Result.map 用法</span><span class="arrow">▼</span></button>'+
+    '<div class="acc-body"><div class="acc-inner">'+codeBlock('// Result.map 擴展函式讓你在不拆開 Result 的情況下轉換資料\ninline fun <T, E: Error, R> Result<T, E>.map(map: (T) -> R): Result<R, E> {\n    return when(this) {\n        is Result.Error -> Result.Error(error)\n        is Result.Success -> Result.Success(map(data))\n    }\n}')+'</div></div></div>';
+
+  h+='<h4 style="margin:16px 0 8px">在此撰寫你的 invoke 函式：</h4>'+
+    '<textarea class="code-editor" id="part6-editor" placeholder="suspend operator fun invoke(): Result<List<Coin>, NetworkError> {\n    // 在這裡寫你的實作\n}"'+(done?' disabled':'')+'>'+escapeHtmlAttr(S.part6Code)+'</textarea>';
+
+  if(!done){
+    h+='<div style="display:flex;gap:8px;margin-top:12px">'+
+      '<button class="btn btn-pri" onclick="checkQuiz6()">提交驗證</button>'+
+      '<button class="btn btn-sec" onclick="showPart6Hint()">顯示範例</button></div>';
+  }
+  h+='<div id="quiz6-result"></div>';
+  if(done) h+='<div class="quiz-result pass" style="margin-top:12px">✅ 已通過！你成功實作了 Use Case。</div>';
+  h+='<div id="part6-sample" style="display:none;margin-top:16px"><h4>範例解答：</h4>'+
+    codeBlock('suspend operator fun invoke(): Result<List<Coin>, NetworkError> {\n    return coinDataSource\n        .getCoins()\n        .map { coins ->\n            coins.filter { it.rank <= 50 }\n        }\n}')+'</div>';
+  h+='</div>';
+
+  h+=insightBlock(6,'operator fun invoke() 是 Kotlin 語法糖。讓 GetCoinsUseCase 實例可以像函式一樣呼叫：getCoinsUseCase() 等同於 getCoinsUseCase.invoke()。這不只是語法便利，更代表 Use Case 就是一個「可執行的業務意圖」。');
+
+  h+=briefCard(6,'動手練習',[
+    'Use Case 封裝業務邏輯（篩選前 50 名），讓 ViewModel 保持輕薄',
+    'operator fun invoke() 讓呼叫端用 useCase() 語法，像呼叫函式一樣自然',
+    'Use Case 是漸進式的——先從簡單的轉發開始，邏輯增長時自然承接'
+  ],'加了 Use Case 值得嗎？','當 ViewModel 有超過 3 個業務邏輯操作時就值得。它讓邏輯可被不同 ViewModel 重複使用，也更容易做單元測試。');
+  return h;
+}
+function escapeHtmlAttr(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function checkQuiz6(){
+  const code=document.getElementById('part6-editor').value;
+  S.part6Code=code;save();
+  const checks=['operator','fun','invoke','suspend','filter'];
+  const hasMap=code.includes('.map')||code.includes('.map {');
+  const pass=checks.every(k=>code.includes(k))&&hasMap;
+  const el=document.getElementById('quiz6-result');
+  if(pass){
+    el.innerHTML='<div class="quiz-result pass">🎉 通過驗證！包含所有關鍵元素。</div>';
+    document.getElementById('part6-sample').style.display='block';
+    completePart(6);
+  } else {
+    const missing=checks.filter(k=>!code.includes(k));
+    if(!hasMap)missing.push('map (Result 轉換)');
+    el.innerHTML='<div class="quiz-result fail">❌ 缺少關鍵元素：'+missing.join('、')+'</div>';
+  }
+}
+function showPart6Hint(){document.getElementById('part6-sample').style.display='block';}
+
+function PART7_CONTENT(){
+  const done=S.completedParts.includes(7);
+  const questions=[
+    {q:'用一句話解釋 Clean Architecture 的 Dependency Rule',keys:['依賴','內','指向'],ref:'所有原始碼的依賴方向必須只能指向內部——外層可以知道內層，但內層絕不能知道外層的存在。'},
+    {q:'為什麼 CoinDataSource 介面放在 Domain 層而不是 Data 層？',keys:['高層','介面','Domain','DIP','依賴反轉'],ref:'這是依賴反轉原則（DIP）的實踐——高層（Domain）定義契約，低層（Data）負責實作。如果介面放在 Data 層，Domain 就會反過來依賴 Data，違反 Dependency Rule。'},
+    {q:'何時應該加入 Use Case 層？何時可以省略？',keys:['業務邏輯','複雜','重複','ViewModel'],ref:'當業務邏輯只是簡單的「取資料→顯示」時可以省略。當邏輯包含篩選、排序、合併多個來源、或需要被多個 ViewModel 共用時，就該加入 Use Case 封裝。'},
+    {q:'如果主管問你為什麼不直接讓 ViewModel 用 RemoteCoinDataSource，你怎麼回答？',keys:['介面','替換','測試','耦合'],ref:'直接依賴具體類會造成強耦合——想換成本地快取要改 ViewModel，想寫測試要起真的 HTTP 伺服器。透過介面，我們可以輕鬆替換實作，單元測試用 Fake、上線用 Remote、離線用 Local。'}
+  ];
+
+  let h='<div class="part-hdr"><span class="tag">Part 7</span><h1>🎓 費曼驗證 — 用自己的話解釋</h1><p class="desc">如果你能用簡單的語言解釋這些概念，代表你真正理解了。完成後獲得 150 XP 和「架構師」稱號！</p></div>';
+
+  h+='<div class="glass-card">';
+  questions.forEach((q,i)=>{
+    h+='<div class="feynman-q"><label>Q'+(i+1)+'：'+q.q+'</label>'+
+      '<textarea class="feynman-ta" id="feynman-'+i+'" placeholder="用你自己的話寫下答案..."'+(done?' disabled':'')+'>'+escapeHtmlAttr(S.part7Answers[i])+'</textarea>';
+    if(done){
+      h+='<div class="feynman-ref show"><strong>參考答案：</strong>'+q.ref+'</div>';
+      h+='<div class="rating">';
+      for(let s=1;s<=5;s++) h+='<span class="rating-star'+(s<=S.part7Ratings[i]?' lit':'')+'" onclick="ratePart7('+i+','+s+')">★</span>';
+      h+='<span style="font-size:.8rem;color:var(--txt2);margin-left:8px">自評：理解程度</span></div>';
+    }
+    h+='</div>';
+  });
+
+  if(!done) h+='<button class="btn btn-pri" onclick="checkQuiz7()" style="margin-top:12px">提交驗證</button>';
+  h+='<div id="quiz7-result"></div>';
+  if(done) h+='<div class="quiz-result pass" style="margin-top:12px">✅ 恭喜！你已完成費曼驗證，成為真正的架構師！</div>';
+  h+='</div>';
+
+  h+=insightBlock(7,'費曼學習法的核心是「教是最好的學」。如果你能向一個不懂程式的人解釋 Clean Architecture，你就真正掌握了它。向主管簡報不是負擔，而是驗證理解深度的機會。');
+
+  h+=briefCard(7,'費曼驗證',[
+    '能用簡單語言解釋架構決策，代表真正理解而非背誦',
+    '架構師的價值在於能向非技術人員解釋「為什麼這樣做」',
+    '費曼學習法——如果解釋不清楚，就回去重新理解'
+  ],'你確定你懂這些架構嗎？','我可以用三句話解釋：依賴方向永遠指向內部，每層用自己的語言說話，介面定義在內層、實作在外層。');
+  return h;
+}
+function ratePart7(i,s){S.part7Ratings[i]=s;save();render();}
+function checkQuiz7(){
+  const questions=[
+    {keys:['依賴','內','指向']},
+    {keys:['高層','介面','Domain','DIP','依賴反轉','契約']},
+    {keys:['業務邏輯','複雜','重複','ViewModel','邏輯']},
+    {keys:['介面','替換','測試','耦合','抽象']}
+  ];
+  // Save answers
+  for(let i=0;i<4;i++){
+    const ta=document.getElementById('feynman-'+i);
+    if(ta) S.part7Answers[i]=ta.value;
+  }
+  save();
+  // Check keywords
+  let allPass=true;
+  const missing=[];
+  questions.forEach((q,i)=>{
+    const ans=S.part7Answers[i]||'';
+    if(ans.length<10){allPass=false;missing.push('Q'+(i+1)+': 答案太短');return;}
+    const found=q.keys.some(k=>ans.includes(k));
+    if(!found){allPass=false;missing.push('Q'+(i+1)+': 缺少核心概念關鍵字');}
+  });
+  const el=document.getElementById('quiz7-result');
+  if(allPass){el.innerHTML='<div class="quiz-result pass">🎉 全部通過！你已展現出對 Clean Architecture 的深度理解。</div>';completePart(7);}
+  else el.innerHTML='<div class="quiz-result fail">❌ '+missing.join('；')+'<br>提示：嘗試使用核心概念詞彙來表達你的理解。</div>';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init(){
+  load();
+  updateStreak();
+  if(S.openingDone){
+    document.getElementById('opening').style.display='none';
+  }
+  render();
+  // Save part6 code on input
+  document.addEventListener('input',e=>{
+    if(e.target.id==='part6-editor'){S.part6Code=e.target.value;save();}
+    if(e.target.classList.contains('feynman-ta')){
+      const idx=parseInt(e.target.id.split('-')[1]);
+      S.part7Answers[idx]=e.target.value;save();
+    }
+  });
+  // Close sidebar on main click (mobile)
+  document.getElementById('main-content').addEventListener('click',()=>{
+    document.getElementById('sidebar').classList.remove('open');
+  });
+}
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
