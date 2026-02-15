@@ -29,6 +29,7 @@
   /* ── 表面（5 級階梯，靛藍底調）── */
   --bg:#151518;--bg-card:#1C1C24;--bg-acc:#1C1C24;
   --bg-sec:#202028;--bg-hover:#262630;--bg-sec-hover:#2C2C38;
+  --bg-card-raised:#1E1E26;
   /* ── 邊框（2 級）── */
   --border:#28282E;--border-lav:#363642;
   /* ── 玻璃 ── */
@@ -129,7 +130,8 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
 .acc-body{max-height:0;overflow:hidden;transition:max-height .4s ease;background:var(--bg-acc)}
 .acc-body.open{max-height:2000px}
 .acc-inner{padding:0 20px 20px}
-[data-theme="dark"] .acc-head{background:var(--bg-sec)}
+[data-theme="dark"] .acc-head{background:var(--bg-card-raised);color:var(--txt);border-left:3px solid var(--lav)}
+[data-theme="dark"] .acc-head:hover{background:var(--bg-hover)}
 
 /* Code — CRITICAL: white-space: pre-wrap + overflow-x: auto */
 .code-wrap{background:#1e1e2e;border-radius:var(--rs);padding:20px;margin:12px 0;overflow-x:auto;font-size:.85rem;line-height:1.6}
