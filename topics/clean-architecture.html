@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clean Architecture 互動學習</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="../core/engine.css">
+<script src="../core/theme.js"></script>
+<style>
+/* Topic-specific: Dependency diagram */
+.dep-diagram{display:flex;justify-content:center;align-items:center;gap:0;margin:24px 0;flex-wrap:wrap}
+.dep-layer{padding:16px 24px;border-radius:var(--rs);font-weight:600;font-size:.85rem;text-align:center;min-width:140px;position:relative}
+.dep-arrow{font-size:1.4rem;color:var(--lav);animation:pulse 2s infinite;margin:0 4px}
+@keyframes arrowFlow{0%,100%{opacity:.3}50%{opacity:1}}
+.dep-outer{background:#fce4ec;color:#c62828;border:2px solid #ef9a9a}
+.dep-mid{background:#e3f2fd;color:#1565c0;border:2px solid #90caf9}
+.dep-inner{background:#e8f5e9;color:#2e7d32;border:2px solid #a5d6a7}
+[data-theme="dark"] .dep-outer{background:#4a2030;color:#f48fb1;border-color:#c62828}
+[data-theme="dark"] .dep-mid{background:#1a3050;color:#90caf9;border-color:#42a5f5}
+[data-theme="dark"] .dep-inner{background:#1a3a1a;color:#a5d6a7;border-color:#66bb6a}
+.layer-label-green{color:#2e7d32}
+.layer-label-blue{color:#1565c0}
+.layer-label-red{color:#c62828}
+[data-theme="dark"] .layer-label-green{color:#a5d6a7}
+[data-theme="dark"] .layer-label-blue{color:#90caf9}
+[data-theme="dark"] .layer-label-red{color:#f48fb1}
+.layer-box{padding:16px;border-radius:var(--rs);text-align:center;border-width:2px;border-style:solid}
+.layer-box-green{background:#e8f5e9;border-color:#a5d6a7}
+.layer-box-orange{background:#fff3e0;border-color:#ffcc80}
+.layer-box-blue{background:#e3f2fd;border-color:#90caf9}
+.layer-box-red{background:#fce4ec;border-color:#ef9a9a}
+[data-theme="dark"] .layer-box-green{background:#1a3a1a;border-color:#66bb6a}
+[data-theme="dark"] .layer-box-orange{background:#3a2a10;border-color:#ffb74d}
+[data-theme="dark"] .layer-box-blue{background:#1a3050;border-color:#42a5f5}
+[data-theme="dark"] .layer-box-red{background:#4a2030;border-color:#c62828}
+.cmp-row-summary{background:var(--bg-sec)}
+@media(max-width:768px){
+  .dep-diagram{flex-direction:column;gap:8px}
+  .dep-arrow{transform:rotate(90deg)}
+}
+</style>
+</head>
+<body>
+
+<div class="opening" id="opening">
+  <div class="opening-box">
+    <div style="font-size:3rem;margin-bottom:16px">🏛️</div>
+    <h1>架構守護者</h1>
+    <p class="sub">你即將成為團隊的架構守護者。<br>每一層的設計決策，都將由你向主管說明。<br><br>透過 7 個章節的互動學習，<br>從 SOLID 原則到費曼驗證，成為真正的架構師。</p>
+    <button class="btn-start" onclick="startJourney()">開始旅程</button>
+  </div>
+</div>
+
+<header class="topbar" id="topbar">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="開啟選單">☰</button>
+  <div class="logo">🏛 Clean Architecture</div>
+  <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="xp-badge">⚡ <span class="num" id="xp-num">0</span> XP</div>
+  <div class="streak-tag" id="streak-tag" style="display:none"></div>
+  <div class="badge-row" id="badge-row"></div>
+</header>
+
+<nav class="sidebar" id="sidebar"></nav>
+<main class="main" id="main-content"></main>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="../core/trainer.js" onerror="document.getElementById('main-content').innerHTML='<div style=\'padding:40px;text-align:center;color:#c44\'>載入失敗：trainer.js 無法載入。請確認檔案路徑正確。</div>'"></script>
+<script src="../core/engine.js" onerror="document.getElementById('main-content').innerHTML='<div style=\'padding:40px;text-align:center;color:#c44\'>載入失敗：engine.js 無法載入。請確認檔案路徑正確。</div>'"></script>
+<script>
+// ============================================================
+// TOPIC CONFIG
+// ============================================================
+var TOPIC_CONFIG = {
+  id: 'ca-learn',
+  legacyKeys: ['ca-learn'],
+  totalXP: 950,
+  hlKeywords: 'class|data|fun|val|var|suspend|operator|sealed|interface|import|package|override|private|return|if|else|when|object|open|abstract|is|in|internal|enum|null|true|false|by|inline|typealias|out',
+  hlTypes: 'String|Int|Double|Boolean|List|Flow|Result|Unit|Long|CoinDataSource|Coin|CoinPrice|CoinDto|CoinPriceDto|NetworkError|CoinUi|CoinListState|DisplayableNumber|HttpClient|ZonedDateTime|Error|DomainError',
+  parts: [
+    {id:1, title:'SOLID 原則', sub:'Clean Architecture 的地基', icon:'🧱', xpRead:50, xpQuiz:50},
+    {id:2, title:'Dependency Rule', sub:'Clean Architecture 的靈魂', icon:'➡️', xpRead:50, xpQuiz:50},
+    {id:3, title:'同心圓映射', sub:'四層→三層的對應關係', icon:'🗺️', xpRead:50, xpQuiz:50},
+    {id:4, title:'逐層實戰走讀', sub:'10 步資料流完整追蹤', icon:'📖', xpRead:50, xpQuiz:50},
+    {id:5, title:'YT Dev vs Google NIA', sub:'兩大流派深度比較', icon:'⚖️', xpRead:50, xpQuiz:50},
+    {id:6, title:'動手練習', sub:'加入 Use Case 層', icon:'🛠️', xpRead:0, xpQuiz:200},
+    {id:7, title:'費曼驗證', sub:'用自己的話解釋架構', icon:'🎓', xpRead:0, xpQuiz:150}
+  ],
+  badges: [
+    {id:'solid', name:'SOLID 基石', icon:'🧱', req:[1]},
+    {id:'dep', name:'依賴追蹤者', icon:'➡️', req:[2]},
+    {id:'map', name:'架構製圖師', icon:'🗺️', req:[3,4]},
+    {id:'judge', name:'流派鑑定師', icon:'⚖️', req:[5]},
+    {id:'craft', name:'Use Case 工匠', icon:'🛠️', req:[6]},
+    {id:'master', name:'架構師', icon:'🎓', req:[1,2,3,4,5,6,7]}
+  ],
+  defaultStateExtra: {
+    part1Matches: {},
+    part2Answers: [null, null, null, null],
+    part3Answer: null,
+    part4Order: null,
+    part5Answer: null,
+    part6Code: '',
+    part7Answers: ['', '', '', ''],
+    part7Ratings: [0, 0, 0, 0]
+  },
+  initExtra: function() {
+    document.addEventListener('input', function(e) {
+      if (e.target.id === 'part6-editor') { S.part6Code = e.target.value; save(); }
+      if (e.target.classList.contains('feynman-ta')) {
+        var idx = parseInt(e.target.id.split('-')[1]);
+        S.part7Answers[idx] = e.target.value; save();
+      }
+    });
+  }
+};
+
+// ============================================================
+// PART 1: SOLID 原則
+// ============================================================
+function getPart1() {
+  var done = S.completedParts.includes(1);
+  var read = S.readParts.includes(1);
+  var solidData = [
+    {letter:'S', name:'Single Responsibility Principle', zh:'單一職責原則',
+     desc:'每個類別只有一個改變的理由。<code>Coin.kt</code> 只因業務欄位變更而改，<code>CoinDto.kt</code> 只因 API 格式變更而改，<code>CoinMapper.kt</code> 只因轉換邏輯變更而改。',
+     code:'// Domain 層 - 純粹的業務模型\ndata class Coin(\n    val id: String,\n    val rank: Int,\n    val name: String,\n    val symbol: String,\n    val marketCapUsd: Double,\n    val priceUsd: Double,\n    val changePercent24Hr: Double,\n)\n\n// Data 層 - 對應 API JSON\nimport kotlinx.serialization.Serializable\n\n@Serializable\ndata class CoinDto(\n    val id: String,\n    val rank: Int,\n    val name: String,\n    // ... 帶有序列化標記\n)'},
+    {letter:'O', name:'Open/Closed Principle', zh:'開放封閉原則',
+     desc:'對擴展開放，對修改封閉。<code>Result&lt;D, E&gt;</code> 是 sealed interface — 目前有 <code>Success</code> 和 <code>Error</code>，未來要加 <code>Loading</code> 只需新增子類別，不用改現有程式碼。',
+     code:'typealias DomainError = Error\n\nsealed interface Result<out D, out E: Error> {\n    data class Success<out D>(val data: D): Result<D, Nothing>\n    data class Error<out E: DomainError>(val error: E): Result<Nothing, E>\n}'},
+    {letter:'L', name:'Liskov Substitution Principle', zh:'里氏替換原則',
+     desc:'子型別必須可以替換父型別。<code>RemoteCoinDataSource</code> 實作 <code>CoinDataSource</code> 介面，ViewModel 透過介面呼叫 — 可以無縫替換為 <code>LocalCoinDataSource</code> 或 <code>FakeCoinDataSource</code>。',
+     code:'// ViewModel 只認介面\nclass CoinListViewModel(\n    private val coinDataSource: CoinDataSource  // 介面\n) : ViewModel()\n\n// DI 在執行時綁定具體實作\nsingleOf(::RemoteCoinDataSource).bind<CoinDataSource>()'},
+    {letter:'I', name:'Interface Segregation Principle', zh:'介面隔離原則',
+     desc:'不要強迫客戶端依賴它不需要的方法。<code>Error</code> 是空的標記介面，<code>NetworkError</code> 繼承它但只定義網路相關的錯誤，不被迫實作不相關的方法。',
+     code:'interface Error  // 空標記介面\n\nenum class NetworkError: Error {\n    REQUEST_TIMEOUT,\n    TOO_MANY_REQUESTS,\n    NO_INTERNET,\n    SERVER_ERROR,\n    SERIALIZATION,\n    UNKNOWN,\n}'},
+    {letter:'D', name:'Dependency Inversion Principle', zh:'依賴反轉原則',
+     desc:'高層模組定義介面（契約），低層模組負責實作。<code>CoinDataSource</code> 介面定義在 Domain 層（高層），<code>RemoteCoinDataSource</code> 在 Data 層（低層）實作。',
+     code:'// Domain 層定義「我需要什麼」\ninterface CoinDataSource {\n    suspend fun getCoins(): Result<List<Coin>, NetworkError>\n    suspend fun getCoinHistory(\n        coinId: String,\n        start: ZonedDateTime,\n        end: ZonedDateTime\n    ): Result<List<CoinPrice>, NetworkError>\n}\n\n// Data 層實作「怎麼做到」\nclass RemoteCoinDataSource(\n    private val httpClient: HttpClient\n): CoinDataSource { ... }'}
+  ];
+
+  var html = '<div class="part-hdr"><span class="tag">Part 1</span><h1>🧱 SOLID 原則 — Clean Architecture 的地基</h1>' +
+    '<p class="desc">Clean Architecture 建立在 SOLID 原則之上。以 CryptoTracker 的實際程式碼，逐一理解每個原則如何被實踐。</p></div>';
+
+  solidData.forEach(function(s) {
+    html += '<div class="accordion"><button class="acc-head" onclick="toggleAcc(this)">' +
+      '<span><strong style="color:var(--lav)">' + s.letter + '</strong> — ' + s.zh + '（' + s.name + '）</span>' +
+      '<span class="arrow">▼</span></button>' +
+      '<div class="acc-body"><div class="acc-inner"><p>' + s.desc + '</p>' + codeBlock(s.code) + '</div></div></div>';
+  });
+
+  html += insightBlock(1, 'SOLID 不是 Clean Architecture 的全部，但違反 SOLID 的架構一定不 Clean。Robert C. Martin 正是 SOLID 的提出者，所以 Clean Architecture 是 SOLID 原則的系統性應用——從類別層級推廣到系統層級。');
+
+  if (!read) html += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(1)">✓ 我讀完了（+50 XP）</button></div>';
+  else html += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  html += getQuiz1HTML(done);
+
+  html += briefCard(1, 'SOLID 原則', [
+    '我們的專案遵循 SOLID 原則，每個檔案有清楚的單一職責（Coin vs CoinDto vs CoinMapper），降低修改風險',
+    '透過 sealed interface（Result）和介面抽象（CoinDataSource），系統對擴展開放、對修改封閉',
+    '最關鍵的是依賴反轉——Domain 層定義介面，Data 層實作，核心業務邏輯不受技術細節綁架'
+  ], '為什麼 Coin 和 CoinDto 長得幾乎一樣還要分開？', '因為它們的變更原因不同。API 格式變了只改 CoinDto，業務需求變了只改 Coin，這就是單一職責原則的價值。');
+
+  return html;
+}
+
+function getQuiz1HTML(done) {
+  var descs = ['Coin.kt 和 CoinDto.kt 分開，各有單一職責', 'Result sealed interface 可擴展而不改現有程式碼',
+    'RemoteCoinDataSource 可替換任何 CoinDataSource', 'Error 標記介面不強迫實作不相關方法', 'CoinDataSource 介面定義在 Domain 層（高層）'];
+  var letters = ['S', 'O', 'L', 'I', 'D'];
+
+  var h = '<div class="quiz-box"><h3>✅ 小測驗：SOLID 配對</h3><p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">將每個 SOLID 字母配對到正確的 CryptoTracker 概念</p>';
+  letters.forEach(function(l) {
+    var sel = S.part1Matches[l];
+    h += '<div class="quiz-row"><span class="quiz-tag" style="font-weight:700;background:var(--lav);color:#fff;cursor:default">' + l + '</span>' +
+      '<select class="quiz-select" onchange="setPart1Match(\'' + l + '\',this.value)"' + (done ? ' disabled' : '') + '><option value="">— 選擇配對 —</option>';
+    descs.forEach(function(d, i) { h += '<option value="' + i + '"' + (sel == i ? ' selected' : '') + '>' + d + '</option>'; });
+    h += '</select></div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz1()" style="margin-top:16px">確認答案</button>';
+  h += '<div id="quiz1-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！所有配對正確。</div>';
+  h += '</div>';
+  return h;
+}
+function setPart1Match(l, v) { S.part1Matches[l] = v === '' ? null : parseInt(v); save(); }
+function checkQuiz1() {
+  var correct = {S:0, O:1, L:2, I:3, D:4};
+  var ok = Object.keys(correct).every(function(l) { return S.part1Matches[l] === correct[l]; });
+  var el = document.getElementById('quiz1-result');
+  if (ok) { el.innerHTML = '<div class="quiz-result pass">🎉 全部正確！</div>'; completePart(1); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 有些配對不正確，再想想看！</div>';
+}
+
+// ============================================================
+// PART 2: Dependency Rule
+// ============================================================
+function getPart2() {
+  var done = S.completedParts.includes(2), read = S.readParts.includes(2);
+  var h = '<div class="part-hdr"><span class="tag">Part 2</span><h1>➡️ Dependency Rule — Clean Architecture 的靈魂</h1>' +
+    '<p class="desc">「Clean Architecture 可以只用一條規則來總結——The Dependency Rule。」所有原始碼依賴方向必須只能指向內部。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:16px">依賴方向圖</h3>' +
+    '<div class="dep-diagram">' +
+    '<div class="dep-layer dep-outer">Presentation 層<div style="font-size:.75rem;margin-top:4px">CoinListViewModel</div></div>' +
+    '<div class="dep-arrow">→</div>' +
+    '<div class="dep-layer dep-inner" style="border-width:3px">Domain 層（核心）<div style="font-size:.75rem;margin-top:4px">Coin, CoinDataSource</div></div>' +
+    '<div class="dep-arrow">←</div>' +
+    '<div class="dep-layer dep-mid">Data 層<div style="font-size:.75rem;margin-top:4px">RemoteCoinDataSource</div></div>' +
+    '</div>' +
+    '<p style="text-align:center;color:var(--txt2);font-size:.85rem;margin-top:12px">箭頭方向 = import 依賴方向，永遠指向 Domain 核心</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">證據：追蹤每個檔案的 import</h3>';
+  h += '<div style="margin-bottom:16px"><strong class="layer-label-green">Domain 層（零外部依賴）</strong>' +
+    codeBlock('// Coin.kt — 完全沒有 import！\ndata class Coin(\n    val id: String,\n    val rank: Int,\n    ...  // 全部屬性都在 domain 層，零依賴\n)\n\n// CoinDataSource.kt — 只 import Domain 自己的型別\nimport com.plcoding.cryptotracker.core.domain.util.NetworkError\nimport com.plcoding.cryptotracker.core.domain.util.Result\nimport java.time.ZonedDateTime') + '</div>';
+  h += '<div style="margin-bottom:16px"><strong class="layer-label-blue">Data 層（依賴 Domain ✅ 不依賴 Presentation ✅）</strong>' +
+    codeBlock('// RemoteCoinDataSource.kt 的 import\nimport com.plcoding.cryptotracker.core.domain.util.Result      // → Domain ✅\nimport com.plcoding.cryptotracker.core.domain.util.map         // → Domain ✅\nimport com.plcoding.cryptotracker.crypto.domain.Coin           // → Domain ✅\nimport com.plcoding.cryptotracker.crypto.domain.CoinDataSource // → Domain ✅\nimport com.plcoding.cryptotracker.crypto.data.mappers.toCoin   // → 同層 Data ✅\n// 沒有任何 crypto.presentation.* 的 import ✅') + '</div>';
+  h += '<div><strong class="layer-label-red">Presentation 層（依賴 Domain ✅ 不依賴 Data ✅）</strong>' +
+    codeBlock('// CoinListViewModel.kt\nimport com.plcoding.cryptotracker.crypto.domain.CoinDataSource // → Domain 介面 ✅\n// 不是 import RemoteCoinDataSource（Data 層）') + '</div></div>';
+
+  h += insightBlock(2, 'Dependency Rule 的威力：當你需要替換資料庫（如從 Room 換成 DataStore），只要新的實作遵守 CoinDataSource 介面，Domain 層和 Presentation 層完全不用動。這就是「穩定性原則」——越內層越穩定，越不常改變。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(2)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var tfQ = [
+    {code:'CoinListViewModel import CoinDataSource', ans:true, explain:'Presentation → Domain，合法'},
+    {code:'Coin.kt import @Serializable', ans:false, explain:'Domain 不該依賴序列化框架'},
+    {code:'CoinMapper import CoinDto 和 Coin', ans:true, explain:'Data 層可以依賴 Domain 層'},
+    {code:'CoinDataSource import RemoteCoinDataSource', ans:false, explain:'Domain 不可依賴 Data 層'}
+  ];
+  h += '<div class="quiz-box"><h3>✅ 小測驗：判斷 import 是否合法</h3>';
+  tfQ.forEach(function(q, i) {
+    var a = S.part2Answers[i];
+    h += '<div class="tf-row"><code class="tf-code">' + q.code + '</code><div class="tf-btns">' +
+      '<button class="tf-btn' + (a === true ? ' sel-t' : '') + '" onclick="setPart2(' + i + ',true)"' + (done ? ' disabled' : '') + '>✅ 合法</button>' +
+      '<button class="tf-btn' + (a === false ? ' sel-f' : '') + '" onclick="setPart2(' + i + ',false)"' + (done ? ' disabled' : '') + '>❌ 違反</button></div></div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz2()" style="margin-top:16px">確認答案</button>';
+  h += '<div id="quiz2-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！你已掌握 Dependency Rule。</div>';
+  h += '</div>';
+
+  h += briefCard(2, 'Dependency Rule', [
+    '所有程式碼依賴方向只能指向內部——Presentation → Domain ← Data',
+    'Domain 層零外部依賴，核心業務邏輯可獨立測試、獨立部署',
+    '介面定義在 Domain 層，確保高層模組不依賴低層實作'
+  ], '這樣分層不會增加開發成本嗎？', '短期多寫幾個檔案，但長期 Data 層替換（如改用 Room 快取）完全不影響 ViewModel 和 Domain 層。這是架構的投資報酬率。');
+  return h;
+}
+function setPart2(i, v) { S.part2Answers[i] = v; save(); render(); }
+function checkQuiz2() {
+  var ans = [true, false, true, false];
+  var ok = ans.every(function(a, i) { return S.part2Answers[i] === a; });
+  var el = document.getElementById('quiz2-result');
+  if (ok) { el.innerHTML = '<div class="quiz-result pass">🎉 全部正確！</div>'; completePart(2); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 有些判斷不正確。提示：Domain 層不可依賴外層的任何東西。</div>';
+}
+
+// ============================================================
+// PART 3: 同心圓映射
+// ============================================================
+function getPart3() {
+  var done = S.completedParts.includes(3), read = S.readParts.includes(3);
+  var view = S.part3View || 'uncle';
+  var h = '<div class="part-hdr"><span class="tag">Part 3</span><h1>🗺️ 同心圓映射 — 四層→三層</h1>' +
+    '<p class="desc">Uncle Bob 的經典四層如何對應到 Android 社群常用的三層架構？關鍵不在幾層，而在 Dependency Rule。</p></div>';
+
+  h += '<div class="glass-card"><div class="toggle-wrap"><div class="toggle-sw">' +
+    '<div class="toggle-opt' + (view === 'uncle' ? ' active' : '') + '" onclick="setView(\'uncle\')">Uncle Bob 四層</div>' +
+    '<div class="toggle-opt' + (view !== 'uncle' ? ' active' : '') + '" onclick="setView(\'android\')">Android 三層</div></div></div>';
+
+  if (view === 'uncle') {
+    h += '<div style="display:flex;flex-direction:column;gap:8px;margin:16px 0">' +
+      '<div class="layer-box layer-box-green">' +
+      '<strong>1. Entities（實體）</strong><br><span style="font-size:.85rem">Coin.kt, CoinPrice.kt</span></div>' +
+      '<div class="layer-box layer-box-orange">' +
+      '<strong>2. Use Cases（應用層）</strong><br><span style="font-size:.85rem">GetCoinsUseCase（CryptoTracker 原版省略）</span></div>' +
+      '<div class="layer-box layer-box-blue">' +
+      '<strong>3. Interface Adapters（轉接層）</strong><br><span style="font-size:.85rem">CoinMapper, CoinListViewModel, CoinUi</span></div>' +
+      '<div class="layer-box layer-box-red">' +
+      '<strong>4. Frameworks & Drivers（最外層）</strong><br><span style="font-size:.85rem">Ktor HttpClient, Jetpack Compose Screen</span></div></div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:8px;margin:16px 0">' +
+      '<div class="layer-box layer-box-green">' +
+      '<strong>Domain 層（最內）</strong><br><span style="font-size:.85rem">Coin, CoinPrice, CoinDataSource<br>= Entities + Use Cases</span></div>' +
+      '<div class="layer-box layer-box-blue">' +
+      '<strong>Data 層</strong><br><span style="font-size:.85rem">RemoteCoinDataSource, CoinMapper, CoinDto<br>= 向內的 Interface Adapters + Frameworks</span></div>' +
+      '<div class="layer-box layer-box-red">' +
+      '<strong>Presentation 層（最外）</strong><br><span style="font-size:.85rem">CoinListViewModel, CoinUi, Compose Screen<br>= 向外的 Interface Adapters + Frameworks</span></div></div>';
+  }
+  h += '</div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">對照表</h3>' +
+    '<table class="cmp-table"><tr><th>Uncle Bob 四層</th><th>Android 三層</th><th>CryptoTracker</th></tr>' +
+    '<tr><td>Entities</td><td>Domain 層</td><td>Coin.kt, CoinPrice.kt</td></tr>' +
+    '<tr><td>Use Cases</td><td>Domain 層（常省略）</td><td>原版無 Use Case</td></tr>' +
+    '<tr><td>Interface Adapters</td><td>Data + Presentation</td><td>CoinMapper, ViewModel, CoinUi</td></tr>' +
+    '<tr><td>Frameworks & Drivers</td><td>被吸收進 Data/Presentation</td><td>Ktor, Compose</td></tr>' +
+    '</table></div>';
+
+  h += insightBlock(3, 'core/ 目錄橫跨多層（core.domain、core.data、core.presentation），它不是獨立的第四層，而是「每一層的共用部分」。分層原則仍然適用於 core/ 內部的子 package。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(3)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var opts = ['Entities（實體層）', 'Use Cases（應用層）', 'Interface Adapters（轉接層）', 'Frameworks & Drivers（最外層）'];
+  h += '<div class="quiz-box"><h3>✅ 小測驗：選擇題</h3>' +
+    '<p style="margin-bottom:16px;font-weight:600">CoinMapper 屬於 Uncle Bob 的哪一層？</p>';
+  opts.forEach(function(o, i) {
+    var sel = S.part3Answer === i;
+    h += '<div class="quiz-opt' + (sel ? ' selected' : '') + '" onclick="setPart3(' + i + ')"' + (done ? ' style="pointer-events:none"' : '') + '>' +
+      String.fromCharCode(65 + i) + '. ' + o + '</div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz3()" style="margin-top:16px">確認答案</button>';
+  h += '<div id="quiz3-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！CoinMapper 是轉接層——負責 DTO ↔ Domain 之間的「翻譯」。</div>';
+  h += '</div>';
+
+  h += briefCard(3, '同心圓映射', [
+    'Uncle Bob 四層架構在 Android 簡化為三層，核心原則不變',
+    'Interface Adapters 被拆分——資料轉接歸 Data 層，UI 轉接歸 Presentation 層',
+    '層數不是重點，Dependency Rule 才是——無論幾層，依賴方向永遠指向內部'
+  ], '我們用三層夠嗎？還是要用四層？', '三層足夠。當業務邏輯複雜到需要獨立的 Use Case 層時，再從 Domain 層分出即可。架構是漸進演化的。');
+  return h;
+}
+function setView(v) { S.part3View = v; save(); render(); }
+function setPart3(i) { S.part3Answer = i; save(); render(); }
+function checkQuiz3() {
+  var el = document.getElementById('quiz3-result');
+  if (S.part3Answer === 2) { el.innerHTML = '<div class="quiz-result pass">🎉 正確！CoinMapper 負責在 DTO 和 Domain 之間做翻譯。</div>'; completePart(3); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 再想想看。CoinMapper 的功能是什麼？它在哪兩層之間做翻譯？</div>';
+}
+
+// ============================================================
+// PART 4: 逐層走讀
+// ============================================================
+function getPart4() {
+  var done = S.completedParts.includes(4), read = S.readParts.includes(4);
+  var h = '<div class="part-hdr"><span class="tag">Part 4</span><h1>📖 逐層實戰走讀</h1><p class="desc">追蹤一次「取得幣種清單」從使用者操作到 API 回傳的完整 10 步資料流。</p></div>';
+  var steps = [
+    {n:1, file:'Coin.kt', title:'Entity — 純粹業務模型', desc:'data class，零 import、零框架依賴。用 Double 儲存金額，格式化是 UI 的事。'},
+    {n:2, file:'CoinDataSource.kt', title:'Repository 介面', desc:'定義在 Domain 層。回傳 Domain 的 Coin，不是 CoinDto。用自定義 Result<D, E> 而非拋 Exception。'},
+    {n:3, file:'Result.kt', title:'型別安全錯誤處理', desc:'sealed interface 保證 when 不需要 else。雙泛型 <D, E> 讓成功和錯誤都有型別。'},
+    {n:4, file:'CoinDto.kt', title:'DTO 數據傳輸物件', desc:'@Serializable 標記是 Data 層的技術細節。DTO 住在 data/networking/dto/。'},
+    {n:5, file:'CoinMapper.kt', title:'Mapper 轉換層', desc:'擴展函式 CoinDto.toCoin()——Kotlin 慣用寫法。方向永遠是 Data → Domain。'},
+    {n:6, file:'RemoteCoinDataSource.kt', title:'實作 DataSource', desc:'實作 CoinDataSource 介面。safeCall 包裝 + map 轉換 DTO → Domain Model。'},
+    {n:7, file:'CoinUi.kt', title:'UI Model', desc:'Double 變 DisplayableNumber（含格式化字串）。多了 @DrawableRes iconRes。'},
+    {n:8, file:'CoinListState.kt', title:'UI State', desc:'@Immutable Compose 優化標記。使用 CoinUi 不是 Coin——每層用自己的語言。'},
+    {n:9, file:'CoinListViewModel.kt', title:'ViewModel', desc:'建構參數是介面 CoinDataSource。在 onSuccess 裡呼叫 toCoinUi() 轉換。'},
+    {n:10, file:'AppModule.kt', title:'DI 串接', desc:'singleOf(::RemoteCoinDataSource).bind<CoinDataSource>() 是整個架構的黏合劑。'}
+  ];
+  steps.forEach(function(s) {
+    h += '<div class="step-card"><span class="step-num">' + s.n + '</span><strong>' + s.title + '</strong>' +
+      '<div class="step-file">' + s.file + '</div><p style="font-size:.9rem;color:var(--txt2)">' + s.desc + '</p></div>';
+  });
+
+  h += insightBlock(4, '資料轉換三次（DTO → Domain → UI Model）看似浪費，但如果 API 格式變了，你只需要改 CoinDto 和 CoinMapper，ViewModel 和 Screen 完全不受影響。這就是 Clean Architecture 的投資報酬率。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(4)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var labels = ['使用者點擊 Screen', 'ViewModel 呼叫 CoinDataSource 介面', 'DI 注入 RemoteCoinDataSource', 'Ktor HttpClient 呼叫 API',
+    'CoinMapper 將 CoinDto 轉為 Coin', 'ViewModel 收到 Result<List<Coin>>', 'toCoinUi() 轉為 CoinUi', 'Screen 根據 State 渲染更新'];
+  if (!S.part4Order || S.part4Order.length !== 8) { S.part4Order = [3, 6, 1, 4, 7, 0, 2, 5]; save(); }
+
+  h += '<div class="quiz-box"><h3>✅ 小測驗：排列資料流順序</h3><p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">用 ▲ ▼ 按鈕將步驟排成正確順序</p>';
+  S.part4Order.forEach(function(idx, pos) {
+    h += '<div class="sort-item"><span class="num">' + (pos + 1) + '</span><span class="text">' + labels[idx] + '</span>' +
+      (!done ? '<button class="sort-btn" onclick="movePart4(' + pos + ',-1)">▲</button><button class="sort-btn" onclick="movePart4(' + pos + ',1)">▼</button>' : '') +
+      '</div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz4()" style="margin-top:16px">確認順序</button>';
+  h += '<div id="quiz4-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！你掌握了完整的資料流。</div>';
+  h += '</div>';
+
+  h += briefCard(4, '逐層走讀', [
+    '一次 API 請求經過 10 個檔案，資料在每層被「翻譯」成該層的語言（DTO → Domain → UI Model）',
+    '每層之間的 Mapper 確保各層可獨立變更而不互相影響',
+    'DI（Koin）是整個架構的黏合劑——在 AppModule 將介面與實作綁定'
+  ], '資料流經這麼多層不會影響效能嗎？', '物件轉換在記憶體中完成，幾乎零成本。真正的效能瓶頸在網路請求和資料庫查詢，不在架構層級。');
+  return h;
+}
+function movePart4(pos, dir) {
+  var np = pos + dir;
+  if (np < 0 || np >= S.part4Order.length) return;
+  var tmp = S.part4Order[pos];
+  S.part4Order[pos] = S.part4Order[np];
+  S.part4Order[np] = tmp;
+  save(); render();
+}
+function checkQuiz4() {
+  var ok = S.part4Order.every(function(v, i) { return v === i; });
+  var el = document.getElementById('quiz4-result');
+  if (ok) { el.innerHTML = '<div class="quiz-result pass">🎉 完美排序！</div>'; completePart(4); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 順序不對。提示：從使用者操作開始，到 Screen 渲染結束。</div>';
+}
+
+// ============================================================
+// PART 5: YT Dev vs Google NIA
+// ============================================================
+function getPart5() {
+  var done = S.completedParts.includes(5), read = S.readParts.includes(5);
+  var h = '<div class="part-hdr"><span class="tag">Part 5</span><h1>⚖️ YT Dev vs Google NIA</h1><p class="desc">兩大 Clean Architecture 流派的 6 大差異深度比較——沒有「正確答案」，只有「適合的選擇」。</p></div>';
+
+  var cmps = [
+    {cat:'模組策略', yt:'單模組，用 package 分層。分層靠開發者自律。', nia:'多模組，每層/每 feature 一個 Gradle module。Gradle 編譯期強制依賴方向。'},
+    {cat:'Repository 位置', yt:'介面定義在 Domain 層（遵循 DIP）', nia:'介面定義在 Data 層（認為 Repository 是 Data 的抽象）'},
+    {cat:'Use Case 層', yt:'省略。ViewModel 直接呼叫 DataSource。', nia:'大量使用。ViewModel → UseCase → Repository。'},
+    {cat:'錯誤處理', yt:'自定義 Result<D, E> sealed interface——型別安全', nia:'Kotlin 內建 Exception + try/catch——簡潔'},
+    {cat:'UI 模型', yt:'專用 CoinUi UI Model，與 Domain 完全分離', nia:'通常直接用 Domain Model'},
+    {cat:'DI 框架', yt:'Koin（純 Kotlin DSL，runtime 解析）', nia:'Hilt（基於 Dagger，compile-time 驗證）'}
+  ];
+
+  h += '<div class="glass-card"><table class="cmp-table"><tr><th>面向</th><th style="color:var(--lav)">YT Dev（CryptoTracker）</th><th style="color:var(--pink)">Google NIA</th></tr>';
+  cmps.forEach(function(c) { h += '<tr><td><strong>' + c.cat + '</strong></td><td>' + c.yt + '</td><td>' + c.nia + '</td></tr>'; });
+  h += '<tr class="cmp-row-summary"><td><strong>適合</strong></td><td>快速開發、小團隊、學習</td><td>大型專案、多團隊、長期維護</td></tr></table></div>';
+
+  h += insightBlock(5, 'Google NIA 專案有超過 60 個 Gradle module。每個 module 的 build.gradle 都有明確的依賴宣告，編譯器在 build time 就會告訴你是否違反了 Dependency Rule——比靠 code review 可靠得多。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(5)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var opts = ['YT Dev 單模組風格 — 簡單但容易失控', 'Google NIA 多模組風格 — 編譯期強制依賴方向', '不需要 Clean Architecture，直接寫就好'];
+  h += '<div class="quiz-box"><h3>✅ 小測驗：情境題</h3>' +
+    '<p style="margin-bottom:16px;font-weight:600">你的團隊有 15 人，需要維護 50+ feature，適合哪種風格？</p>';
+  opts.forEach(function(o, i) {
+    var sel = S.part5Answer === i;
+    h += '<div class="quiz-opt' + (sel ? ' selected' : '') + '" onclick="setPart5(' + i + ')"' + (done ? ' style="pointer-events:none"' : '') + '>' + String.fromCharCode(65 + i) + '. ' + o + '</div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz5()" style="margin-top:16px">確認答案</button>';
+  h += '<div id="quiz5-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！大團隊需要編譯期的強制保障。</div>';
+  h += '</div>';
+
+  h += briefCard(5, '兩大流派比較', [
+    'YT Dev 風格適合小團隊快速開發，Google NIA 適合大團隊長期維護',
+    '模組化的真正價值：Gradle 依賴設定能「編譯期強制」Dependency Rule',
+    '沒有「正確的 Clean Architecture」，只有「適合你團隊的」'
+  ], '我們現在該選哪種？', '建議先用 YT Dev 風格快速驗證，等團隊超過 5 人或業務邏輯複雜時，再漸進引入 Use Case 和多模組。');
+  return h;
+}
+function setPart5(i) { S.part5Answer = i; save(); render(); }
+function checkQuiz5() {
+  var el = document.getElementById('quiz5-result');
+  if (S.part5Answer === 1) { el.innerHTML = '<div class="quiz-result pass">🎉 正確！15 人團隊需要模組化來強制架構規範。</div>'; completePart(5); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 再想想——15 人團隊如果只靠自律，Dependency Rule 很容易被打破。</div>';
+}
+
+// ============================================================
+// PART 6: 動手練習
+// ============================================================
+function getPart6() {
+  var done = S.completedParts.includes(6);
+  var h = '<div class="part-hdr"><span class="tag">Part 6</span><h1>🛠️ 動手練習 — 加入 Use Case 層</h1><p class="desc">在 CryptoTracker 中實作 GetCoinsUseCase，體驗 Google NIA 風格。完成後獲得 200 XP！</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">📋 任務說明</h3>' +
+    '<p style="margin-bottom:12px">實作 <code>GetCoinsUseCase</code>：從 CoinDataSource 取得幣種列表，並篩選出 rank ≤ 50 的幣種。</p>' +
+    '<p style="margin-bottom:16px;color:var(--txt2);font-size:.85rem">需要包含：<code>operator fun invoke()</code>、<code>suspend</code>、<code>filter</code>、結果轉換</p>';
+
+  h += '<h4 style="margin-bottom:8px">骨架程式碼：</h4>';
+  h += codeBlock('class GetCoinsUseCase(\n    private val coinDataSource: CoinDataSource\n) {\n    // 你的程式碼寫在下方編輯器\n}');
+
+  h += '<h4 style="margin:16px 0 8px">提示：</h4>';
+  h += '<div class="accordion"><button class="acc-head" onclick="toggleAcc(this)"><span>💡 Result.map 用法</span><span class="arrow">▼</span></button>' +
+    '<div class="acc-body"><div class="acc-inner">' + codeBlock('// Result.map 擴展函式讓你在不拆開 Result 的情況下轉換資料\ninline fun <T, E: Error, R> Result<T, E>.map(map: (T) -> R): Result<R, E> {\n    return when(this) {\n        is Result.Error -> Result.Error(error)\n        is Result.Success -> Result.Success(map(data))\n    }\n}') + '</div></div></div>';
+
+  h += '<h4 style="margin:16px 0 8px">在此撰寫你的 invoke 函式：</h4>' +
+    '<textarea class="code-editor" id="part6-editor" placeholder="suspend operator fun invoke(): Result<List<Coin>, NetworkError> {\n    // 在這裡寫你的實作\n}"' + (done ? ' disabled' : '') + '>' + escapeHtmlAttr(S.part6Code) + '</textarea>';
+
+  if (!done) {
+    h += '<div style="display:flex;gap:8px;margin-top:12px">' +
+      '<button class="btn btn-pri" onclick="checkQuiz6()">提交驗證</button>' +
+      '<button class="btn btn-sec" onclick="showPart6Hint()">顯示範例</button></div>';
+  }
+  h += '<div id="quiz6-result"></div>';
+  if (done) h += '<div class="quiz-result pass" style="margin-top:12px">✅ 已通過！你成功實作了 Use Case。</div>';
+  h += '<div id="part6-sample" style="display:none;margin-top:16px"><h4>範例解答：</h4>' +
+    codeBlock('suspend operator fun invoke(): Result<List<Coin>, NetworkError> {\n    return coinDataSource\n        .getCoins()\n        .map { coins ->\n            coins.filter { it.rank <= 50 }\n        }\n}') + '</div>';
+  h += '</div>';
+
+  h += insightBlock(6, 'operator fun invoke() 是 Kotlin 語法糖。讓 GetCoinsUseCase 實例可以像函式一樣呼叫：getCoinsUseCase() 等同於 getCoinsUseCase.invoke()。這不只是語法便利，更代表 Use Case 就是一個「可執行的業務意圖」。');
+
+  h += briefCard(6, '動手練習', [
+    'Use Case 封裝業務邏輯（篩選前 50 名），讓 ViewModel 保持輕薄',
+    'operator fun invoke() 讓呼叫端用 useCase() 語法，像呼叫函式一樣自然',
+    'Use Case 是漸進式的——先從簡單的轉發開始，邏輯增長時自然承接'
+  ], '加了 Use Case 值得嗎？', '當 ViewModel 有超過 3 個業務邏輯操作時就值得。它讓邏輯可被不同 ViewModel 重複使用，也更容易做單元測試。');
+  return h;
+}
+function checkQuiz6() {
+  var code = document.getElementById('part6-editor').value;
+  S.part6Code = code; save();
+  var checks = ['operator', 'fun', 'invoke', 'suspend', 'filter'];
+  var hasMap = code.includes('.map') || code.includes('.map {');
+  var pass = checks.every(function(k) { return code.includes(k); }) && hasMap;
+  var el = document.getElementById('quiz6-result');
+  if (pass) {
+    el.innerHTML = '<div class="quiz-result pass">🎉 通過驗證！包含所有關鍵元素。</div>';
+    document.getElementById('part6-sample').style.display = 'block';
+    completePart(6);
+  } else {
+    var missing = checks.filter(function(k) { return !code.includes(k); });
+    if (!hasMap) missing.push('map (Result 轉換)');
+    el.innerHTML = '<div class="quiz-result fail">❌ 缺少關鍵元素：' + missing.join('、') + '</div>';
+  }
+}
+function showPart6Hint() { document.getElementById('part6-sample').style.display = 'block'; }
+
+// ============================================================
+// PART 7: 費曼驗證
+// ============================================================
+function getPart7() {
+  var done = S.completedParts.includes(7);
+  var questions = [
+    {q:'用一句話解釋 Clean Architecture 的 Dependency Rule', keys:['依賴','內','指向'], ref:'所有原始碼的依賴方向必須只能指向內部——外層可以知道內層，但內層絕不能知道外層的存在。'},
+    {q:'為什麼 CoinDataSource 介面放在 Domain 層而不是 Data 層？', keys:['高層','介面','Domain','DIP','依賴反轉'], ref:'這是依賴反轉原則（DIP）的實踐——高層（Domain）定義契約，低層（Data）負責實作。如果介面放在 Data 層，Domain 就會反過來依賴 Data，違反 Dependency Rule。'},
+    {q:'何時應該加入 Use Case 層？何時可以省略？', keys:['業務邏輯','複雜','重複','ViewModel'], ref:'當業務邏輯只是簡單的「取資料→顯示」時可以省略。當邏輯包含篩選、排序、合併多個來源、或需要被多個 ViewModel 共用時，就該加入 Use Case 封裝。'},
+    {q:'如果主管問你為什麼不直接讓 ViewModel 用 RemoteCoinDataSource，你怎麼回答？', keys:['介面','替換','測試','耦合'], ref:'直接依賴具體類會造成強耦合——想換成本地快取要改 ViewModel，想寫測試要起真的 HTTP 伺服器。透過介面，我們可以輕鬆替換實作，單元測試用 Fake、上線用 Remote、離線用 Local。'}
+  ];
+
+  var h = '<div class="part-hdr"><span class="tag">Part 7</span><h1>🎓 費曼驗證 — 用自己的話解釋</h1><p class="desc">如果你能用簡單的語言解釋這些概念，代表你真正理解了。完成後獲得 150 XP 和「架構師」稱號！</p></div>';
+
+  h += '<div class="glass-card">';
+  questions.forEach(function(q, i) {
+    h += '<div class="feynman-q"><label>Q' + (i + 1) + '：' + q.q + '</label>' +
+      '<textarea class="feynman-ta" id="feynman-' + i + '" placeholder="用你自己的話寫下答案..."' + (done ? ' disabled' : '') + '>' + escapeHtmlAttr(S.part7Answers[i]) + '</textarea>';
+    if (done) {
+      h += '<div class="feynman-ref show"><strong>參考答案：</strong>' + q.ref + '</div>';
+      h += '<div class="rating">';
+      for (var s = 1; s <= 5; s++) h += '<span class="rating-star' + (s <= S.part7Ratings[i] ? ' lit' : '') + '" onclick="ratePart7(' + i + ',' + s + ')">★</span>';
+      h += '<span style="font-size:.8rem;color:var(--txt2);margin-left:8px">自評：理解程度</span></div>';
+    }
+    h += '</div>';
+  });
+
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz7()" style="margin-top:12px">提交驗證</button>';
+  h += '<div id="quiz7-result"></div>';
+  if (done) h += '<div class="quiz-result pass" style="margin-top:12px">✅ 恭喜！你已完成費曼驗證，成為真正的架構師！</div>';
+  h += '</div>';
+
+  h += insightBlock(7, '費曼學習法的核心是「教是最好的學」。如果你能向一個不懂程式的人解釋 Clean Architecture，你就真正掌握了它。向主管簡報不是負擔，而是驗證理解深度的機會。');
+
+  h += briefCard(7, '費曼驗證', [
+    '能用簡單語言解釋架構決策，代表真正理解而非背誦',
+    '架構師的價值在於能向非技術人員解釋「為什麼這樣做」',
+    '費曼學習法——如果解釋不清楚，就回去重新理解'
+  ], '你確定你懂這些架構嗎？', '我可以用三句話解釋：依賴方向永遠指向內部，每層用自己的語言說話，介面定義在內層、實作在外層。');
+  return h;
+}
+function ratePart7(i, s) { S.part7Ratings[i] = s; save(); render(); }
+function checkQuiz7() {
+  var questions = [
+    {keys:['依賴','內','指向']},
+    {keys:['高層','介面','Domain','DIP','依賴反轉','契約']},
+    {keys:['業務邏輯','複雜','重複','ViewModel','邏輯']},
+    {keys:['介面','替換','測試','耦合','抽象']}
+  ];
+  for (var i = 0; i < 4; i++) {
+    var ta = document.getElementById('feynman-' + i);
+    if (ta) S.part7Answers[i] = ta.value;
+  }
+  save();
+  var allPass = true;
+  var missing = [];
+  questions.forEach(function(q, i) {
+    var ans = S.part7Answers[i] || '';
+    if (ans.length < 10) { allPass = false; missing.push('Q' + (i + 1) + ': 答案太短'); return; }
+    var found = q.keys.some(function(k) { return ans.includes(k); });
+    if (!found) { allPass = false; missing.push('Q' + (i + 1) + ': 缺少核心概念關鍵字'); }
+  });
+  var el = document.getElementById('quiz7-result');
+  if (allPass) { el.innerHTML = '<div class="quiz-result pass">🎉 全部通過！你已展現出對 Clean Architecture 的深度理解。</div>'; completePart(7); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ ' + missing.join('；') + '<br>提示：嘗試使用核心概念詞彙來表達你的理解。</div>';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+var TOPIC_PARTS = [getPart1, getPart2, getPart3, getPart4, getPart5, getPart6, getPart7];
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof LearningEngine !== 'undefined') {
+    LearningEngine.init(TOPIC_CONFIG, TOPIC_PARTS);
+  }
+});
+</script>
+</body>
+</html>

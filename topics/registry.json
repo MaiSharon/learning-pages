@@ -1,0 +1,32 @@
+[
+  {
+    "id": "ca-learn",
+    "title": "Clean Architecture 互動學習",
+    "icon": "🏛️",
+    "description": "Android 專案的 Clean Architecture 實踐 — 含測驗、XP 系統、程式碼走讀",
+    "path": "topics/clean-architecture.html",
+    "totalXP": 950,
+    "totalParts": 7,
+    "totalBadges": 6
+  },
+  {
+    "id": "nia-arch-learn",
+    "title": "Now in Android 架構解密",
+    "icon": "🏗️",
+    "description": "NIA 官方參考應用的架構設計指南 — 7 章節、多種互動測驗、模擬功能實作",
+    "path": "nia-architecture.html",
+    "totalXP": 1750,
+    "totalParts": 7,
+    "totalBadges": 7
+  },
+  {
+    "id": "m3-patterns",
+    "title": "Compose Material3 六大設計模式",
+    "icon": "🧩",
+    "description": "深入 Material3 原始碼，解鎖 Slot API、Defaults、@Immutable 等 6 大可復用元件設計模式",
+    "path": "topics/m3-patterns.html",
+    "totalXP": 1350,
+    "totalParts": 6,
+    "totalBadges": 5
+  }
+]

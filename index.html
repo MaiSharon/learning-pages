@@ -3,125 +3,391 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Learning Pages</title>
+<title>Learning Pages — 訓練師總部</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root {
-  --bg: #FAFAF8;
-  --lav: #B8A9E8;
-  --pink: #F2B8C6;
-  --blue: #A8C8E8;
-  --mint: #B8E8D0;
-  --txt: #2D2B3A;
-  --txt2: #8E8A9E;
-  --glass: rgba(255,255,255,0.6);
-  --glass-b: rgba(255,255,255,0.3);
-  --sh: 0 4px 24px rgba(0,0,0,0.04);
-  --sh2: 0 8px 32px rgba(0,0,0,0.08);
-  --r: 20px;
+  --bg: #F8F8FA;
+  --lav: #5B6ABF;
+  --pink: #7B8CDE;
+  --blue: #5588AA;
+  --mint: #4A9A72;
+  --txt: #1A1A1C;
+  --txt2: #6B6B70;
+  --glass: rgba(248,248,250,0.88);
+  --glass-b: rgba(0,0,0,0.06);
+  --sh: 0 2px 16px rgba(0,0,0,0.04);
+  --sh2: 0 4px 24px rgba(0,0,0,0.08);
+  --r: 16px;
+  --rs: 10px;
   --ease: all .3s cubic-bezier(.4,0,.2,1);
+  --bg-card: #FFFFFF;
+  --border: #E5E5E8;
+  --bg-sec: #F0F0F4;
+  --bg-sec-hover: #E8E8EE;
+  --bg-badge: #EDEDF2;
+  --bg-opening-1: #F0F0F8;
+  --bg-opening-2: #F5F0F4;
+  --bg-opening-3: #EEF2F8;
+}
+[data-theme="dark"] {
+  --bg: #151518;
+  --lav: #8B9AE8;
+  --pink: #9AA8F0;
+  --blue: #74ADDA;
+  --mint: #6ED0A8;
+  --txt: #EAEAEE;
+  --txt2: #9898A4;
+  --glass: rgba(21,21,24,0.90);
+  --glass-b: rgba(40,40,52,0.5);
+  --sh: 0 2px 12px rgba(0,0,0,0.35);
+  --sh2: 0 4px 20px rgba(0,0,0,0.45);
+  --bg-card: #1C1C24;
+  --border: #28282E;
+  --bg-sec: #202028;
+  --bg-sec-hover: #2C2C38;
+  --bg-badge: #242430;
+  --bg-opening-1: #151518;
+  --bg-opening-2: #1A1A26;
+  --bg-opening-3: #151520;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: 'Noto Sans TC', sans-serif;
-  background: linear-gradient(135deg, #f5f0ff 0%, #fff5f8 50%, #f0f7ff 100%);
+  font-family: 'Pretendard', 'Noto Sans TC', sans-serif;
+  background: linear-gradient(135deg, var(--bg-opening-1) 0%, var(--bg-opening-2) 50%, var(--bg-opening-3) 100%);
   color: var(--txt);
   min-height: 100vh;
-  line-height: 1.7;
+  line-height: 1.8;
 }
-.container {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 60px 24px 80px;
-}
-.header {
-  text-align: center;
-  margin-bottom: 48px;
-}
-.header-icon {
-  font-size: 3rem;
-  margin-bottom: 12px;
-}
-.header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--lav), var(--pink));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 8px;
-}
-.header p {
-  font-size: 1rem;
-  color: var(--txt2);
-}
-.card {
-  display: block;
+.container { max-width: 720px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* Trainer Card */
+.trainer-card {
   background: var(--glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-b);
   border-radius: var(--r);
   box-shadow: var(--sh);
-  padding: 28px 32px;
+  padding: 32px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+.trainer-icon { font-size: 3rem; margin-bottom: 8px; }
+.trainer-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--lav), var(--pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+}
+.trainer-stats {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: .9rem;
+  color: var(--txt2);
   margin-bottom: 16px;
+}
+.trainer-stats span { white-space: nowrap; }
+.xp-bar-wrap {
+  max-width: 400px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: .8rem;
+  color: var(--txt2);
+}
+.xp-bar {
+  flex: 1;
+  height: 10px;
+  background: var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--lav), var(--pink));
+  border-radius: 5px;
+  transition: width .5s ease;
+}
+.global-badges {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.g-badge {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  background: var(--bg-badge);
+  filter: grayscale(1) opacity(.3);
+  transition: var(--ease);
+}
+.g-badge.earned { filter: none; background: linear-gradient(135deg, var(--lav), var(--pink)); }
+.storage-warn {
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: var(--rs);
+  padding: 12px 16px;
+  font-size: .85rem;
+  color: #e65100;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+/* Section headers */
+.section-hdr {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--txt2);
+  margin-bottom: 16px;
+}
+
+/* Topic Card */
+.topic-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-b);
+  border-radius: var(--r);
+  box-shadow: var(--sh);
+  padding: 24px 28px;
+  margin-bottom: 12px;
   text-decoration: none;
   color: var(--txt);
   transition: var(--ease);
 }
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--sh2);
+.topic-card:hover { transform: translateY(-2px); box-shadow: var(--sh2); }
+.topic-icon { font-size: 2rem; flex-shrink: 0; }
+.topic-info { flex: 1; min-width: 0; }
+.topic-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 2px; }
+.topic-desc { font-size: .8rem; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topic-meta { font-size: .75rem; color: var(--txt2); margin-top: 4px; }
+.topic-progress-wrap {
+  width: 80px; height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
-.card-icon {
-  font-size: 1.6rem;
-  margin-bottom: 8px;
+.topic-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--lav), var(--pink));
+  border-radius: 3px;
 }
-.card-title {
-  font-size: 1.15rem;
-  font-weight: 600;
-  margin-bottom: 4px;
+.topic-pct { font-size: .8rem; font-weight: 600; color: var(--lav); flex-shrink: 0; min-width: 40px; text-align: right; }
+
+/* Settings */
+.settings-card {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-b);
+  border-radius: var(--r);
+  box-shadow: var(--sh);
+  padding: 24px 28px;
+  margin-top: 32px;
 }
-.card-desc {
-  font-size: 0.9rem;
-  color: var(--txt2);
+.settings-card h3 { font-size: .95rem; margin-bottom: 16px; }
+.settings-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.s-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: .85rem; font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: var(--ease);
 }
-.footer {
-  text-align: center;
-  margin-top: 48px;
-  font-size: 0.8rem;
-  color: var(--txt2);
-}
+.s-btn-pri { background: linear-gradient(135deg, var(--lav), var(--pink)); color: #fff; }
+.s-btn-pri:hover { transform: translateY(-1px); }
+.s-btn-sec { background: var(--bg-sec); color: var(--lav); }
+.s-btn-sec:hover { background: var(--bg-sec-hover); }
+.import-input { display: none; }
+.toast-wrap { position: fixed; top: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+
+.footer { text-align: center; margin-top: 48px; font-size: .8rem; color: var(--txt2); }
 
 @media (max-width: 480px) {
-  .container { padding: 40px 16px 60px; }
-  .header h1 { font-size: 1.6rem; }
-  .card { padding: 22px 20px; }
+  .container { padding: 24px 16px 60px; }
+  .trainer-title { font-size: 1.3rem; }
+  .topic-card { padding: 18px 16px; gap: 12px; }
+  .topic-desc { display: none; }
 }
 </style>
+<script src="core/theme.js"></script>
 </head>
 <body>
 <div class="container">
-  <div class="header">
-    <div class="header-icon">📚</div>
-    <h1>Learning Pages</h1>
-    <p>互動式學習頁面集合</p>
+  <div id="storage-warn"></div>
+  <div class="trainer-card" id="trainer-card"></div>
+  <h3 class="section-hdr">學習主題</h3>
+  <div id="topic-list"><p style="color:var(--txt2);font-size:.9rem">載入中⋯⋯</p></div>
+  <div class="settings-card">
+    <h3>⚙️ 設定</h3>
+    <div class="settings-btns">
+      <button class="s-btn s-btn-sec" id="theme-btn" onclick="toggleTheme()">🌙 暗色模式</button>
+      <button class="s-btn s-btn-pri" onclick="doExport()">📤 匯出進度</button>
+      <button class="s-btn s-btn-sec" onclick="document.getElementById('import-file').click()">📥 匯入進度</button>
+      <input type="file" id="import-file" class="import-input" accept=".json" onchange="doImport(event)">
+    </div>
   </div>
-
-  <a class="card" href="clean-architecture.html">
-    <div class="card-icon">🏛️</div>
-    <div class="card-title">Clean Architecture 互動學習</div>
-    <div class="card-desc">Android 專案的 Clean Architecture 實踐 — 含測驗、XP 系統、程式碼走讀</div>
-  </a>
-
-  <a class="card" href="nia-architecture.html">
-    <div class="card-icon">🏗️</div>
-    <div class="card-title">Now in Android 架構解密</div>
-    <div class="card-desc">NIA 官方參考應用的架構設計指南 — 7 章節、多種互動測驗、模擬功能實作</div>
-  </a>
-
-  <!-- 新增學習頁面時，複製上方 card 區塊，修改 href、icon、title、desc 即可 -->
-
+  <div class="footer">Powered by GitHub Pages</div>
 </div>
-<div class="footer">Powered by GitHub Pages</div>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="core/trainer.js"></script>
+<script>
+function showToast(text, type) {
+  var w = document.getElementById('toast-wrap');
+  var t = document.createElement('div');
+  t.style.cssText = 'padding:14px 24px;border-radius:12px;background:var(--bg-card);color:var(--txt);box-shadow:var(--sh2);font-size:.9rem;font-weight:500;animation:slideIn .4s ease;border-left:4px solid ' + (type === 'err' ? '#f38ba8' : 'var(--lav)');
+  t.textContent = text;
+  w.appendChild(t);
+  setTimeout(function() { t.remove(); }, 3000);
+}
+
+function renderTrainer() {
+  var s = Trainer.state;
+  var lv = Trainer.getLevel();
+  var next = Trainer.getNextLevel();
+  var topicCount = Object.keys(s.topicSnapshots).length;
+
+  var pct = 0;
+  var barLabel = '';
+  if (next) {
+    pct = Math.round((s.globalXP - lv.xp) / (next.xp - lv.xp) * 100);
+    barLabel = lv.xp + ' → ' + next.xp + ' XP';
+  } else {
+    pct = 100;
+    barLabel = 'MAX';
+  }
+
+  var html = '<div class="trainer-icon">' + lv.icon + '</div>' +
+    '<div class="trainer-title">Lv.' + lv.level + ' ' + lv.name + '</div>' +
+    '<div class="trainer-stats">' +
+    '<span>⚡ ' + s.globalXP.toLocaleString() + ' XP</span>' +
+    '<span>🔥 連續 ' + s.streak + ' 天</span>' +
+    '<span>📚 ' + topicCount + ' 主題</span>' +
+    '</div>' +
+    '<div class="xp-bar-wrap"><div class="xp-bar"><div class="xp-bar-fill" style="width:' + pct + '%"></div></div><span>' + barLabel + '</span></div>';
+
+  if (Trainer.globalBadges.length > 0) {
+    html += '<div class="global-badges">';
+    Trainer.globalBadges.forEach(function(b) {
+      var earned = s.globalBadges.includes(b.id);
+      html += '<div class="g-badge' + (earned ? ' earned' : '') + '" title="' + b.name + '">' + b.icon + '</div>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('trainer-card').innerHTML = html;
+
+  if (!Trainer.storageAvailable) {
+    document.getElementById('storage-warn').innerHTML =
+      '<div class="storage-warn">⚠️ 偵測到隱私模式或 localStorage 不可用，進度不會被保存。建議使用一般模式瀏覽。</div>';
+  }
+}
+
+function renderTopics(registry) {
+  var s = Trainer.state;
+  var container = document.getElementById('topic-list');
+  if (!registry || registry.length === 0) {
+    container.innerHTML = '<p style="color:var(--txt2)">尚無學習主題。</p>';
+    return;
+  }
+
+  var html = '';
+  registry.forEach(function(topic) {
+    var snap = s.topicSnapshots[topic.id];
+    var completedParts = snap ? snap.completedParts.length : 0;
+    var totalParts = topic.totalParts;
+    var pct = Math.round(completedParts / totalParts * 100);
+    var xp = snap ? snap.xp : 0;
+    var badges = snap ? snap.badges : 0;
+    var status = pct === 100 ? '✅' : (pct > 0 ? '🔄' : '🆕');
+
+    html += '<a class="topic-card" href="' + topic.path + '">' +
+      '<div class="topic-icon">' + topic.icon + '</div>' +
+      '<div class="topic-info">' +
+      '<div class="topic-title">' + topic.title + '</div>' +
+      '<div class="topic-desc">' + topic.description + '</div>' +
+      '<div class="topic-meta">⚡ ' + xp + ' XP &nbsp; 🏅 ' + badges + '/' + topic.totalBadges + '</div>' +
+      '</div>' +
+      '<div class="topic-progress-wrap"><div class="topic-progress-fill" style="width:' + pct + '%"></div></div>' +
+      '<div class="topic-pct">' + status + ' ' + pct + '%</div>' +
+      '</a>';
+  });
+
+  container.innerHTML = html;
+}
+
+function doExport() {
+  var json = Trainer.exportData();
+  var blob = new Blob([json], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'learning-pages-backup-' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 進度已匯出');
+}
+
+function doImport(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var ok = Trainer.importData(e.target.result);
+    if (ok) {
+      showToast('📥 進度已匯入，重新載入中⋯⋯');
+      setTimeout(function() { location.reload(); }, 1000);
+    } else {
+      showToast('❌ 匯入失敗：檔案格式不正確', 'err');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// Update theme button label
+function updateThemeBtn() {
+  var btn = document.getElementById('theme-btn');
+  if (btn) {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    btn.textContent = isDark ? '☀️ 亮色模式' : '🌙 暗色模式';
+  }
+}
+var _origToggle = toggleTheme;
+toggleTheme = function() { _origToggle(); updateThemeBtn(); };
+
+// Init
+updateThemeBtn();
+renderTrainer();
+fetch('topics/registry.json')
+  .then(function(r) { return r.json(); })
+  .then(function(data) { renderTopics(data); })
+  .catch(function() {
+    document.getElementById('topic-list').innerHTML =
+      '<p style="color:var(--txt2)">無法載入主題清單。</p>';
+  });
+</script>
+<style>
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:none;opacity:1}}
+</style>
 </body>
 </html>

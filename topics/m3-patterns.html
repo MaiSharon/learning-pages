@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compose Material3 六大設計模式</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="../core/engine.css">
+<style>
+.layer-diagram{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+.layer-box{padding:14px 20px;border-radius:var(--rs);text-align:center;font-weight:600;font-size:.85rem}
+.layer-api{background:#e8f5e9;color:#2e7d32;border:2px solid #a5d6a7}
+.layer-base{background:#e3f2fd;color:#1565c0;border:2px solid #90caf9}
+.layer-layout{background:#fce4ec;color:#c62828;border:2px solid #ef9a9a}
+.layer-arrow{text-align:center;font-size:1.2rem;color:var(--lav)}
+.param-group{padding:12px 16px;border-radius:var(--rs);margin-bottom:8px}
+.param-modifier{background:#e3f2fd;border-left:3px solid #1565c0}
+.param-style{background:#e8f5e9;border-left:3px solid #2e7d32}
+.param-slot{background:#fff3e0;border-left:3px solid #ff9800}
+.param-behavior{background:#fce4ec;border-left:3px solid #c62828}
+</style>
+</head>
+<body>
+
+<div class="opening" id="opening">
+  <div class="opening-box">
+    <div style="font-size:3rem;margin-bottom:16px">🧩</div>
+    <h1>M3 模式大師</h1>
+    <p class="sub">你即將深入 Jetpack Compose Material3 的原始碼，<br>解鎖 Google 工程師使用的 6 大元件設計模式。<br><br>從 Slot API 到 SubcomposeLayout，<br>掌握建構可復用 Compose 元件的精髓。</p>
+    <button class="btn-start" onclick="startJourney()">開始旅程</button>
+  </div>
+</div>
+
+<header class="topbar" id="topbar">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="開啟選單">☰</button>
+  <div class="logo">🧩 M3 Patterns</div>
+  <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="xp-badge">⚡ <span class="num" id="xp-num">0</span> XP</div>
+  <div class="streak-tag" id="streak-tag" style="display:none"></div>
+  <div class="badge-row" id="badge-row"></div>
+</header>
+
+<nav class="sidebar" id="sidebar"></nav>
+<main class="main" id="main-content"></main>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="../core/trainer.js" onerror="document.getElementById('main-content').innerHTML='<div style=\'padding:40px;text-align:center;color:#c44\'>載入失敗：trainer.js 無法載入。請確認檔案路徑正確。</div>'"></script>
+<script src="../core/engine.js" onerror="document.getElementById('main-content').innerHTML='<div style=\'padding:40px;text-align:center;color:#c44\'>載入失敗：engine.js 無法載入。請確認檔案路徑正確。</div>'"></script>
+<script>
+var TOPIC_CONFIG = {
+  id: 'm3-patterns',
+  legacyKeys: [],
+  totalXP: 1350,
+  hlKeywords: 'fun|val|var|class|object|interface|override|internal|private|if|else|return|when|is|as|get|import|package|data|sealed|enum|companion|suspend|inline|operator|open|abstract|annotation|const|by|lazy|true|false|null|it|in|out',
+  hlTypes: 'Composable|Modifier|Shape|Color|Dp|BorderStroke|PaddingValues|RowScope|ColumnScope|MutableInteractionSource|InteractionSource|State|Boolean|Int|String|Unit|Surface|Row|Column|Box|MaterialTheme|ButtonColors|ButtonElevation|ButtonDefaults|CardColors|CardElevation|CardDefaults|TextFieldDefaults|ScaffoldDefaults|WindowInsets|FabPosition|SubcomposeLayout|BasicTextField|TextFieldState|TextFieldValue|Immutable|Stable',
+  parts: [
+    {id:1, title:'Slot API', sub:'元件的靈魂', icon:'🧩', xpRead:50, xpQuiz:100},
+    {id:2, title:'Defaults 物件', sub:'集中管理預設值', icon:'🏭', xpRead:50, xpQuiz:100},
+    {id:3, title:'@Immutable 配置類別', sub:'效能守門員', icon:'🔒', xpRead:50, xpQuiz:100},
+    {id:4, title:'函式重載', sub:'型別安全的多型', icon:'🔀', xpRead:50, xpQuiz:100},
+    {id:5, title:'委託基礎元件', sub:'分層架構', icon:'🏗️', xpRead:50, xpQuiz:100},
+    {id:6, title:'SubcomposeLayout', sub:'測量依賴解方', icon:'📐', xpRead:50, xpQuiz:100}
+  ],
+  badges: [
+    {id:'slot-master', name:'Slot 大師', icon:'🧩', req:[1]},
+    {id:'config-guru', name:'配置達人', icon:'⚙️', req:[2,3]},
+    {id:'overload-pro', name:'重載專家', icon:'🔀', req:[4]},
+    {id:'arch-hero', name:'架構英雄', icon:'🏗️', req:[5,6]},
+    {id:'m3-expert', name:'M3 全通', icon:'🏆', req:[1,2,3,4,5,6]}
+  ],
+  defaultStateExtra: {
+    part1Matches: {},
+    part2Answer: null,
+    part3Answers: [null, null, null, null],
+    part4Order: [2,0,3,1],
+    part5Matches: {},
+    part6Order: [3,5,1,0,4,2]
+  },
+  initExtra: function() {}
+};
+
+// ============================================================
+// PART 1: Slot API — 元件的靈魂
+// ============================================================
+function getPart1() {
+  var done = S.completedParts.includes(1);
+  var read = S.readParts.includes(1);
+
+  var h = '<div class="part-hdr"><span class="tag">Part 1</span><h1>🧩 Slot API — 元件的靈魂</h1>' +
+    '<p class="desc">Slot API 就像牆上的「插座」：元件定義插座的形狀，使用者決定插入什麼。這是 Material3 最核心的組合模式。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">插座與插頭的比喻</h3>' +
+    '<p style="margin-bottom:16px">傳統 UI 框架用<strong>繼承</strong>擴展元件（Override、子類化），但 Compose 用<strong>組合</strong>——把「洞」留給呼叫者填入任意內容。' +
+    '這些「洞」就是 Slot 參數，型別是 <code>@Composable () -> Unit</code> 或其變體。</p>' +
+    '<h4 style="margin-bottom:8px">四種 Slot 層次</h4>' +
+    '<div class="param-group param-slot"><strong>1. 無限制 Slot</strong>：<code>() -> Unit</code><br>' +
+    '<span style="font-size:.85rem;color:var(--txt2)">完全自由的內容注入，使用者可以放入任何 Composable</span></div>' +
+    '<div class="param-group param-slot"><strong>2. 帶 Scope Slot</strong>：<code>ColumnScope.() -> Unit</code><br>' +
+    '<span style="font-size:.85rem;color:var(--txt2)">限制垂直佈局 API，只有 Column 裡的 API 可用（如 weight、align）</span></div>' +
+    '<div class="param-group param-slot"><strong>3. 帶參數 Slot</strong>：<code>(PaddingValues) -> Unit</code><br>' +
+    '<span style="font-size:.85rem;color:var(--txt2)">父層傳遞計算值給子元件，如 Scaffold 的 content padding</span></div>' +
+    '<div class="param-group param-slot"><strong>4. 可選 Slot</strong>：<code>(() -> Unit)?</code><br>' +
+    '<span style="font-size:.85rem;color:var(--txt2)">可選內容注入，null 表示不顯示該區域</span></div></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">Scaffold 的 Slot 參數</h3>' +
+    codeBlock('@Composable\\nfun Scaffold(\\n    modifier: Modifier = Modifier,\\n    topBar: @Composable () -> Unit = {},\\n    bottomBar: @Composable () -> Unit = {},\\n    snackbarHost: @Composable () -> Unit = {},\\n    floatingActionButton: @Composable () -> Unit = {},\\n    floatingActionButtonPosition: FabPosition = FabPosition.End,\\n    containerColor: Color = MaterialTheme.colorScheme.background,\\n    contentColor: Color = contentColorFor(containerColor),\\n    contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,\\n    content: @Composable (PaddingValues) -> Unit,\\n)') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">注意：<code>topBar</code> 等是無限制 Slot，而 <code>content</code> 是帶參數 Slot——接收 <code>PaddingValues</code>。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">TextField 的可選 Slot 參數</h3>' +
+    codeBlock('label: @Composable (() -> Unit)? = null,\\nplaceholder: @Composable (() -> Unit)? = null,\\nleadingIcon: @Composable (() -> Unit)? = null,\\ntrailingIcon: @Composable (() -> Unit)? = null,\\nprefix: @Composable (() -> Unit)? = null,\\nsuffix: @Composable (() -> Unit)? = null,\\nsupportingText: @Composable (() -> Unit)? = null,') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">全部都是可選 Slot <code>(() -> Unit)?</code>，null 代表不渲染。</p></div>';
+
+  h += insightBlock(1, 'Compose 用組合取代繼承。Material3 沒有一個元件是透過繼承來擴展的——全部都是函式 + Slot 組合。這不是偶然，而是刻意的設計哲學：繼承建立的是「is-a」關係（你是什麼），Slot 建立的是「has-a」關係（你有什麼）。後者更靈活、更容易測試、更不容易產生脆弱的類別階層。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(1)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var types = ['() -> Unit', 'ColumnScope.() -> Unit', '(PaddingValues) -> Unit', '(() -> Unit)?'];
+  var scenarios = ['完全自由的內容注入', '限制垂直佈局 API', '父層傳遞計算值', '可選內容注入'];
+  var keys = ['a', 'b', 'c', 'd'];
+
+  h += '<div class="quiz-box"><h3>✅ 小測驗：Slot 型別配對</h3>' +
+    '<p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">將每個 Slot 型別配對到正確的使用情境</p>';
+  keys.forEach(function(k, ki) {
+    var sel = S.part1Matches[k];
+    h += '<div class="quiz-row"><span class="quiz-tag" style="font-weight:700;background:var(--lav);color:#fff;cursor:default">' + types[ki] + '</span>' +
+      '<select class="quiz-select" onchange="setPart1Match(\'' + k + '\',this.value)"' + (done ? ' disabled' : '') + '><option value="">— 選擇情境 —</option>';
+    scenarios.forEach(function(s, si) {
+      h += '<option value="' + si + '"' + (sel == si ? ' selected' : '') + '>' + s + '</option>';
+    });
+    h += '</select></div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz1()" style="margin-top:16px">確認答案</button>';
+  h += '<div id="quiz1-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！所有 Slot 型別配對正確。</div>';
+  h += '</div>';
+
+  h += briefCard(1, 'Slot API', [
+    'Slot API 是 Compose 的「組合取代繼承」哲學的核心實踐',
+    '四種 Slot 層次：無限制、帶 Scope、帶參數、可選',
+    'Material3 所有元件都用 Slot 而非繼承來擴展功能'
+  ], '為什麼不直接用 View.addView() 那種方式？', 'View.addView() 是命令式——你告訴系統「怎麼做」。Slot API 是宣告式——你描述「要什麼」，Compose 幫你組合。宣告式更容易推理、測試和重用。');
+
+  return h;
+}
+
+function setPart1Match(k, v) { S.part1Matches[k] = v === '' ? null : parseInt(v); save(); }
+function checkQuiz1() {
+  var correct = {a: 0, b: 1, c: 2, d: 3};
+  var ok = Object.keys(correct).every(function(k) { return S.part1Matches[k] === correct[k]; });
+  var el = document.getElementById('quiz1-result');
+  if (ok) { el.innerHTML = '<div class="quiz-result pass">🎉 全部正確！</div>'; completePart(1); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 有些配對不正確，再想想看！</div>';
+}
+
+// ============================================================
+// PART 2: Defaults 物件 — 集中管理預設值
+// ============================================================
+function getPart2() {
+  var done = S.completedParts.includes(2);
+  var read = S.readParts.includes(2);
+
+  var h = '<div class="part-hdr"><span class="tag">Part 2</span><h1>🏭 Defaults 物件 — 集中管理預設值</h1>' +
+    '<p class="desc">為什麼預設值不直接寫在參數上？因為很多預設值需要 @Composable 環境才能取得。Defaults 物件就是解方。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">為什麼不直接給預設值？</h3>' +
+    '<p style="margin-bottom:12px">看這個例子——<code>CardDefaults.shape</code> 的預設值來自 <code>MaterialTheme</code>，而 <code>MaterialTheme</code> 需要 <code>@Composable</code> 環境才能讀取：</p>' +
+    codeBlock('object CardDefaults {\\n    // 需要 @Composable 才能讀取 theme token\\n    val shape: Shape @Composable get() = FilledCardTokens.ContainerShape.value\\n}') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">Kotlin 函式參數的預設值不能是 <code>@Composable</code> 的，所以必須用 Defaults 物件包裝。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">CardDefaults 完整程式碼</h3>' +
+    codeBlock('object CardDefaults {\\n    val shape: Shape @Composable get() = FilledCardTokens.ContainerShape.value\\n\\n    @Composable\\n    fun cardElevation(\\n        defaultElevation: Dp = FilledCardTokens.ContainerElevation,\\n        pressedElevation: Dp = FilledCardTokens.PressedContainerElevation,\\n        focusedElevation: Dp = FilledCardTokens.FocusContainerElevation,\\n        hoveredElevation: Dp = FilledCardTokens.HoverContainerElevation,\\n        draggedElevation: Dp = FilledCardTokens.DraggedContainerElevation,\\n        disabledElevation: Dp = FilledCardTokens.DisabledContainerElevation,\\n    ): CardElevation = CardElevation(...)\\n\\n    @Composable\\n    fun cardColors() = MaterialTheme.colorScheme.defaultCardColors\\n}') +
+    '</div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">「只改你要改的」模式</h3>' +
+    '<p style="margin-bottom:12px">使用者只需要覆蓋自己關心的屬性，其他維持主題預設值：</p>' +
+    codeBlock('// 只改 elevation，其他維持預設\\nCard(\\n    elevation = CardDefaults.cardElevation(\\n        defaultElevation = 8.dp  // 只改這一個\\n        // 其他 5 個 elevation 維持主題預設值\\n    )\\n) {\\n    Text("Hello")\\n}') +
+    '</div>';
+
+  h += insightBlock(2, 'Defaults 物件本質上是工廠模式（Factory Pattern）。它封裝了 @Composable 依賴——使用者不需要知道預設的 shape 來自 FilledCardTokens.ContainerShape.value，只需要呼叫 CardDefaults.shape 就好。這也讓 Material3 能夠統一更新所有元件的預設值，只要改 Token 就行。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(2)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var opts = [
+    {code: 'Card(\n  colors = CardDefaults.cardColors(),\n  elevation = CardDefaults.cardElevation(\n    defaultElevation = 8.dp\n  )\n)', label: '使用 Defaults 工廠 + 只覆蓋需要的值'},
+    {code: 'Card(\n  containerColor = Color.Red\n)', label: 'Card 沒有 containerColor 參數'},
+    {code: 'Card(\n  colors = CardColors(\n    Color.Red, Color.White,\n    Color.Gray, Color.Gray\n  )\n)', label: '直接建構，不用工廠方法'},
+    {code: 'Card(\n  colors = MaterialTheme\n    .colorScheme.cardColors()\n)', label: 'colorScheme 沒有 cardColors()'}
+  ];
+
+  h += '<div class="quiz-box"><h3>✅ 小測驗：哪個正確使用 Defaults？</h3>' +
+    '<p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">選出正確使用 CardDefaults 的寫法</p>';
+  opts.forEach(function(o, i) {
+    var sel = S.part2Answer === i;
+    h += '<div class="quiz-opt' + (sel ? ' selected' : '') + '" onclick="setPart2(' + i + ')"' + (done ? ' style="pointer-events:none"' : '') + '>' +
+      String.fromCharCode(65 + i) + '. ' + o.label + codeBlock(o.code.replace(/\n/g, '\\n')) + '</div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz2()" style="margin-top:16px">確認答案</button>';
+  h += '<div id="quiz2-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！正確使用 Defaults 工廠方法。</div>';
+  h += '</div>';
+
+  h += briefCard(2, 'Defaults 物件', [
+    'Defaults 是工廠模式，封裝 @Composable 依賴',
+    '使用者只覆蓋需要的屬性，其他維持主題預設值',
+    '統一的 Defaults 讓 Material3 能集中管理所有預設值'
+  ], '為什麼不把預設值直接寫在 Card() 參數上？', '因為 shape、colors 等預設值來自 MaterialTheme，需要 @Composable 環境。Kotlin 函式參數的預設值不能是 @Composable 的，所以必須用 Defaults 物件。');
+
+  return h;
+}
+
+function setPart2(i) { S.part2Answer = i; save(); render(); }
+function checkQuiz2() {
+  var el = document.getElementById('quiz2-result');
+  if (S.part2Answer === 0) {
+    el.innerHTML = '<div class="quiz-result pass">🎉 正確！使用 CardDefaults 工廠方法 + 只覆蓋需要改的值。</div>';
+    completePart(2);
+  } else {
+    var hints = ['', 'Card 沒有 containerColor 這個頂層參數，顏色要透過 CardDefaults.cardColors() 傳入。', '直接建構 CardColors 會失去主題整合，而且不夠語義化。', 'MaterialTheme.colorScheme 沒有 cardColors() 方法，顏色由 CardDefaults 管理。'];
+    el.innerHTML = '<div class="quiz-result fail">❌ ' + (hints[S.part2Answer] || '再想想看！') + '</div>';
+  }
+}
+
+// ============================================================
+// PART 3: @Immutable 配置類別 — 效能守門員
+// ============================================================
+function getPart3() {
+  var done = S.completedParts.includes(3);
+  var read = S.readParts.includes(3);
+
+  var h = '<div class="part-hdr"><span class="tag">Part 3</span><h1>🔒 @Immutable 配置類別 — 效能守門員</h1>' +
+    '<p class="desc">Compose 的 Recomposition 機制需要知道「什麼變了」。@Immutable 和正確的 equals/hashCode 就是效能的關鍵。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">Recomposition 觸發條件</h3>' +
+    '<p style="margin-bottom:12px">Compose 在每次 Recomposition 時，會比較參數是否「相等」。如果所有參數都相等，就<strong>跳過</strong>該 Composable 的重組。</p>' +
+    '<p style="margin-bottom:12px">關鍵問題：Compose 怎麼知道一個物件有沒有變？</p>' +
+    '<div class="param-group param-behavior"><strong>沒有 @Immutable</strong>：Compose 不確定物件是否會變，每次都觸發 Recomposition</div>' +
+    '<div class="param-group param-style"><strong>有 @Immutable</strong>：Compose 信任「這個物件建立後不會變」，只用 equals() 比較</div></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">CardColors 完整實作</h3>' +
+    codeBlock('@Immutable\\nclass CardColors constructor(\\n    val containerColor: Color,\\n    val contentColor: Color,\\n    val disabledContainerColor: Color,\\n    val disabledContentColor: Color,\\n) {\\n    fun copy(...) = CardColors(...)\\n\\n    @Stable\\n    internal fun containerColor(enabled: Boolean): Color =\\n        if (enabled) containerColor else disabledContainerColor\\n\\n    @Stable\\n    internal fun contentColor(enabled: Boolean): Color =\\n        if (enabled) contentColor else disabledContentColor\\n\\n    override fun equals(other: Any?): Boolean {\\n        if (this === other) return true\\n        if (other == null || other !is CardColors) return false\\n        if (containerColor != other.containerColor) return false\\n        if (contentColor != other.contentColor) return false\\n        if (disabledContainerColor != other.disabledContainerColor) return false\\n        if (disabledContentColor != other.disabledContentColor) return false\\n        return true\\n    }\\n\\n    override fun hashCode(): Int { ... }\\n}') +
+    '</div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">三大重點</h3>' +
+    '<div class="param-group param-modifier"><strong>@Immutable</strong>：告訴 Compose 這個類別建立後所有屬性不會改變（全部是 <code>val</code>）</div>' +
+    '<div class="param-group param-style"><strong>equals/hashCode</strong>：讓 Compose 能正確比較「新舊物件是否相同」，避免不必要的 Recomposition</div>' +
+    '<div class="param-group param-slot"><strong>copy()</strong>：建立新物件而非修改原始物件——不可變性的標準操作</div></div>';
+
+  h += insightBlock(3, '<strong>@Stable vs @Immutable 差異</strong>：@Immutable 更嚴格——所有屬性永遠不變。@Stable 則允許屬性可變，但要求：(1) 對 equals 的結果永遠一致，(2) 屬性變化時會通知 Compose（如 MutableState）。CardColors 用 @Immutable 因為它所有屬性都是 val；而 MutableInteractionSource 用 @Stable 因為它的狀態會變但會通知系統。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(3)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var tfQ = [
+    {text: '@Immutable 的所有屬性必須是 val', ans: true},
+    {text: '不實作 equals() 不影響 Recomposition 效能', ans: false},
+    {text: 'CardColors 的 copy() 會修改原始物件', ans: false},
+    {text: '@Stable 和 @Immutable 完全相同', ans: false}
+  ];
+
+  h += '<div class="quiz-box"><h3>✅ 小測驗：是非題</h3>';
+  tfQ.forEach(function(q, i) {
+    var a = S.part3Answers[i];
+    h += '<div class="tf-row"><span class="tf-code">' + q.text + '</span><div class="tf-btns">' +
+      '<button class="tf-btn' + (a === true ? ' sel-t' : '') + '" onclick="setPart3(' + i + ',true)"' + (done ? ' disabled' : '') + '>⭕ 對</button>' +
+      '<button class="tf-btn' + (a === false ? ' sel-f' : '') + '" onclick="setPart3(' + i + ',false)"' + (done ? ' disabled' : '') + '>❌ 錯</button></div></div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz3()" style="margin-top:16px">確認答案</button>';
+  h += '<div id="quiz3-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！你已掌握 @Immutable 的核心概念。</div>';
+  h += '</div>';
+
+  h += briefCard(3, '@Immutable 配置類別', [
+    '@Immutable 告訴 Compose「這個物件不會變」，避免不必要的 Recomposition',
+    'equals/hashCode 讓 Compose 正確比較新舊物件',
+    'copy() 建立新物件，不修改原始物件——不可變性的標準操作'
+  ], '不加 @Immutable 會怎樣？', 'Compose 無法確定物件是否會變，每次 Recomposition 都會重新執行該 Composable，即使參數沒變。在複雜 UI 中這會導致明顯的效能下降。');
+
+  return h;
+}
+
+function setPart3(i, v) { S.part3Answers[i] = v; save(); render(); }
+function checkQuiz3() {
+  var ans = [true, false, false, false];
+  var ok = ans.every(function(a, i) { return S.part3Answers[i] === a; });
+  var el = document.getElementById('quiz3-result');
+  if (ok) { el.innerHTML = '<div class="quiz-result pass">🎉 全部正確！</div>'; completePart(3); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 有些判斷不正確。提示：@Immutable 保證所有屬性是 val、equals 影響 Recomposition、copy 建立新物件。</div>';
+}
+
+// ============================================================
+// PART 4: 函式重載 — 型別安全的多型
+// ============================================================
+function getPart4() {
+  var done = S.completedParts.includes(4);
+  var read = S.readParts.includes(4);
+
+  var h = '<div class="part-hdr"><span class="tag">Part 4</span><h1>🔀 函式重載 — 型別安全的多型</h1>' +
+    '<p class="desc">同一個元件名稱，不同的參數簽名。Material3 用函式重載實現型別安全的多型，而非 Boolean flag。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">問題：Boolean flag 的陷阱</h3>' +
+    '<p style="margin-bottom:12px">如果用 Boolean flag 來區分可點擊和不可點擊的 Card：</p>' +
+    codeBlock('// 糟糕的設計——Boolean flag\\nfun Card(\\n    clickable: Boolean = false,\\n    onClick: (() -> Unit)? = null, // clickable=false 時這個參數無意義\\n    ...\\n)\\n\\n// 危險：clickable=true 但忘了傳 onClick\\nCard(clickable = true) { ... }  // 編譯通過，但執行時沒反應！') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">Boolean flag 把錯誤推遲到執行時。函式重載在編譯期就能發現問題。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">Card 的兩個重載</h3>' +
+    '<div class="accordion"><button class="acc-head" onclick="toggleAcc(this)"><span>靜態版 Card（不可點擊）</span><span class="arrow">▼</span></button>' +
+    '<div class="acc-body"><div class="acc-inner">' +
+    codeBlock('@Composable\\nfun Card(\\n    modifier: Modifier = Modifier,\\n    shape: Shape = CardDefaults.shape,\\n    colors: CardColors = CardDefaults.cardColors(),\\n    elevation: CardElevation = CardDefaults.cardElevation(),\\n    border: BorderStroke? = null,\\n    content: @Composable ColumnScope.() -> Unit,\\n) {\\n    Surface(\\n        modifier = modifier,\\n        shape = shape,\\n        color = colors.containerColor(enabled = true),\\n        contentColor = colors.contentColor(enabled = true),\\n        shadowElevation = elevation.shadowElevation(\\n            enabled = true, interactionSource = null\\n        ).value,\\n        border = border,\\n    ) {\\n        Column(content = content)\\n    }\\n}') +
+    '</div></div></div>' +
+    '<div class="accordion"><button class="acc-head" onclick="toggleAcc(this)"><span>可點擊版 Card（onClick 必填）</span><span class="arrow">▼</span></button>' +
+    '<div class="acc-body"><div class="acc-inner">' +
+    codeBlock('@Composable\\nfun Card(\\n    onClick: () -> Unit,\\n    modifier: Modifier = Modifier,\\n    enabled: Boolean = true,\\n    shape: Shape = CardDefaults.shape,\\n    colors: CardColors = CardDefaults.cardColors(),\\n    elevation: CardElevation = CardDefaults.cardElevation(),\\n    border: BorderStroke? = null,\\n    interactionSource: MutableInteractionSource? = null,\\n    content: @Composable ColumnScope.() -> Unit,\\n)') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">onClick 是第一個參數且無預設值——強制呼叫者提供點擊處理。</p>' +
+    '</div></div></div></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">TextField 的三個重載</h3>' +
+    codeBlock('// 重載 1：String 版\\nfun TextField(\\n    value: String,\\n    onValueChange: (String) -> Unit, ...\\n)\\n\\n// 重載 2：TextFieldValue 版（含游標位置等元資料）\\nfun TextField(\\n    value: TextFieldValue,\\n    onValueChange: (TextFieldValue) -> Unit, ...\\n)\\n\\n// 重載 3：TextFieldState 版（狀態管理內建）\\nfun TextField(\\n    state: TextFieldState, ...\\n)') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">三個版本共用 TextField 名稱，但型別系統保證你不會混用。</p></div>';
+
+  h += insightBlock(4, '函式重載比 Boolean flag 好在哪？<strong>編譯期型別安全</strong>。Boolean flag 讓錯誤在執行時才爆發（例如忘了傳 onClick），而函式重載在編譯時就報錯——可點擊版的 onClick 是必填參數，不傳就無法編譯。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(4)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var labels = [
+    'Map<String, Any> 傳參數',
+    'Boolean flag 控制',
+    'sealed class 區分',
+    '函式重載（Material3 做法）'
+  ];
+
+  h += '<div class="quiz-box"><h3>✅ 小測驗：從最不安全到最安全排序</h3>' +
+    '<p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">用 ▲ ▼ 按鈕把方案從最不安全（上）排到最安全（下）</p>';
+  S.part4Order.forEach(function(idx, pos) {
+    h += '<div class="sort-item"><span class="num">' + (pos + 1) + '</span><span class="text">' + labels[idx] + '</span>' +
+      (!done ? '<button class="sort-btn" onclick="movePart4(' + pos + ',-1)">▲</button><button class="sort-btn" onclick="movePart4(' + pos + ',1)">▼</button>' : '') +
+      '</div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz4()" style="margin-top:16px">確認順序</button>';
+  h += '<div id="quiz4-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！你掌握了型別安全的層次。</div>';
+  h += '</div>';
+
+  h += briefCard(4, '函式重載', [
+    'Material3 用函式重載取代 Boolean flag，實現編譯期型別安全',
+    'Card 有靜態版和可點擊版兩個重載，TextField 有三個重載',
+    '重載讓不合法的狀態在編譯時就被拒絕，而非等到執行時'
+  ], '重載會不會造成 API 混亂？', '不會。IDE 的自動完成會根據你傳入的參數自動選擇正確的重載。對使用者來說，感覺就像同一個函式根據情境自動適配。');
+
+  return h;
+}
+
+function movePart4(pos, dir) {
+  var np = pos + dir;
+  if (np < 0 || np >= S.part4Order.length) return;
+  var tmp = S.part4Order[pos];
+  S.part4Order[pos] = S.part4Order[np];
+  S.part4Order[np] = tmp;
+  save(); render();
+}
+function checkQuiz4() {
+  var ok = S.part4Order.every(function(v, i) { return v === i; });
+  var el = document.getElementById('quiz4-result');
+  if (ok) { el.innerHTML = '<div class="quiz-result pass">🎉 排序正確！從 Map 到函式重載，型別安全逐步提升。</div>'; completePart(4); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 順序不對。提示：Map 沒有型別檢查最不安全，函式重載有編譯期保障最安全。</div>';
+}
+
+// ============================================================
+// PART 5: 委託基礎元件 — 分層架構
+// ============================================================
+function getPart5() {
+  var done = S.completedParts.includes(5);
+  var read = S.readParts.includes(5);
+
+  var h = '<div class="part-hdr"><span class="tag">Part 5</span><h1>🏗️ 委託基礎元件 — 分層架構</h1>' +
+    '<p class="desc">Material3 的元件不是從零開始建構，而是一層層委託下去。每一層只做自己的事。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">三層架構圖</h3>' +
+    '<div class="layer-diagram">' +
+    '<div class="layer-box layer-api">語義層（API 層）<div style="font-size:.75rem;margin-top:4px">ElevatedButton、FilledCard、OutlinedTextField</div></div>' +
+    '<div class="layer-arrow">↓ 委託</div>' +
+    '<div class="layer-box layer-base">行為層（基礎元件）<div style="font-size:.75rem;margin-top:4px">Button、Card、TextField</div></div>' +
+    '<div class="layer-arrow">↓ 委託</div>' +
+    '<div class="layer-box layer-layout">佈局層（底層原語）<div style="font-size:.75rem;margin-top:4px">Surface、Row、Column、BasicTextField、SubcomposeLayout</div></div>' +
+    '</div></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">Card 委託 Surface + Column</h3>' +
+    codeBlock('@Composable\\nfun Card(\\n    modifier: Modifier = Modifier,\\n    shape: Shape = CardDefaults.shape,\\n    colors: CardColors = CardDefaults.cardColors(),\\n    elevation: CardElevation = CardDefaults.cardElevation(),\\n    border: BorderStroke? = null,\\n    content: @Composable ColumnScope.() -> Unit,\\n) {\\n    Surface(\\n        modifier = modifier,\\n        shape = shape,\\n        color = colors.containerColor(enabled = true),\\n        contentColor = colors.contentColor(enabled = true),\\n        shadowElevation = elevation.shadowElevation(\\n            enabled = true, interactionSource = null\\n        ).value,\\n        border = border,\\n    ) {\\n        Column(content = content)\\n    }\\n}') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">Card = Surface（處理形狀、顏色、陰影） + Column（垂直排列內容）</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">Button 委託 Surface + Row</h3>' +
+    codeBlock('@Composable\\nfun Button(\\n    onClick: () -> Unit,\\n    modifier: Modifier = Modifier,\\n    enabled: Boolean = true,\\n    shape: Shape = ButtonDefaults.shape,\\n    colors: ButtonColors = ButtonDefaults.buttonColors(),\\n    elevation: ButtonElevation? = ButtonDefaults.buttonElevation(),\\n    border: BorderStroke? = null,\\n    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,\\n    interactionSource: MutableInteractionSource? = null,\\n    content: @Composable RowScope.() -> Unit\\n) {\\n    val containerColor = colors.containerColor(enabled)\\n    val contentColor = colors.contentColor(enabled)\\n    Surface(\\n        onClick = onClick,\\n        modifier = modifier.semantics { role = Role.Button },\\n        enabled = enabled,\\n        shape = shape,\\n        color = containerColor,\\n        contentColor = contentColor,\\n        shadowElevation = elevation?.shadowElevation(\\n            enabled, interactionSource\\n        )?.value ?: 0.dp,\\n        border = border,\\n        interactionSource = interactionSource,\\n    ) {\\n        ProvideContentColorTextStyle(\\n            contentColor = contentColor,\\n            textStyle = MaterialTheme.typography.labelLarge\\n        ) {\\n            Row(\\n                Modifier.defaultMinSize(\\n                    minWidth = ButtonDefaults.MinWidth,\\n                    minHeight = ButtonDefaults.MinHeight\\n                ).padding(contentPadding),\\n                horizontalArrangement = Arrangement.Center,\\n                verticalAlignment = Alignment.CenterVertically,\\n                content = content\\n            )\\n        }\\n    }\\n}') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">Button = Surface（處理點擊、形狀、顏色） + Row（水平排列圖示和文字）</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">ElevatedButton 一行委託 Button</h3>' +
+    codeBlock('@Composable\\nfun ElevatedButton(\\n    onClick: () -> Unit,\\n    modifier: Modifier = Modifier,\\n    enabled: Boolean = true,\\n    shape: Shape = ButtonDefaults.elevatedShape,\\n    colors: ButtonColors = ButtonDefaults.elevatedButtonColors(),\\n    elevation: ButtonElevation? = ButtonDefaults.elevatedButtonElevation(),\\n    border: BorderStroke? = null,\\n    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,\\n    interactionSource: MutableInteractionSource? = null,\\n    content: @Composable RowScope.() -> Unit\\n) = Button(\\n    onClick, modifier, enabled, shape, colors, elevation,\\n    border, contentPadding, interactionSource, content\\n)') +
+    '<p style="font-size:.85rem;color:var(--txt2);margin-top:8px">完整實作只有一行！只是用不同的 Defaults 值呼叫 Button。</p></div>';
+
+  h += insightBlock(5, 'ElevatedButton 的完整實作真的只有一行——<code>= Button(...)</code>。差異只在 Defaults 值：<code>ButtonDefaults.elevatedShape</code>、<code>elevatedButtonColors()</code>、<code>elevatedButtonElevation()</code>。這說明了 Defaults 物件模式（Part 2）和委託模式的完美搭配——改一組預設值就能「變出」新元件。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(5)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var components = ['Card', 'Button', 'ElevatedButton', 'Scaffold', 'TextField'];
+  var bases = ['Surface + Column', 'Surface + Row', 'Button', 'SubcomposeLayout', 'BasicTextField'];
+  var keys5 = ['a', 'b', 'c', 'd', 'e'];
+
+  h += '<div class="quiz-box"><h3>✅ 小測驗：元件配對基礎元件</h3>' +
+    '<p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">將每個 M3 元件配對到它委託的基礎元件</p>';
+  keys5.forEach(function(k, ki) {
+    var sel = S.part5Matches[k];
+    h += '<div class="quiz-row"><span class="quiz-tag" style="font-weight:700;background:var(--lav);color:#fff;cursor:default">' + components[ki] + '</span>' +
+      '<select class="quiz-select" onchange="setPart5Match(\'' + k + '\',this.value)"' + (done ? ' disabled' : '') + '><option value="">— 選擇基礎元件 —</option>';
+    bases.forEach(function(b, bi) {
+      h += '<option value="' + bi + '"' + (sel == bi ? ' selected' : '') + '>' + b + '</option>';
+    });
+    h += '</select></div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz5()" style="margin-top:16px">確認答案</button>';
+  h += '<div id="quiz5-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！你已掌握 M3 的分層委託架構。</div>';
+  h += '</div>';
+
+  h += briefCard(5, '委託基礎元件', [
+    'Material3 元件分三層：語義層 → 行為層 → 佈局層',
+    'Card = Surface + Column，Button = Surface + Row',
+    'ElevatedButton 只是用不同 Defaults 值委託 Button——一行完成'
+  ], '為什麼不直接在 ElevatedButton 裡寫 Surface？', '因為 Button 已經處理了所有邏輯（semantics、contentColor、typography）。ElevatedButton 的差異只在外觀，不在行為。委託避免了邏輯重複。');
+
+  return h;
+}
+
+function setPart5Match(k, v) { S.part5Matches[k] = v === '' ? null : parseInt(v); save(); }
+function checkQuiz5() {
+  var correct = {a: 0, b: 1, c: 2, d: 3, e: 4};
+  var ok = Object.keys(correct).every(function(k) { return S.part5Matches[k] === correct[k]; });
+  var el = document.getElementById('quiz5-result');
+  if (ok) { el.innerHTML = '<div class="quiz-result pass">🎉 全部正確！</div>'; completePart(5); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 有些配對不正確。提示：看看原始碼中每個元件的函式體內呼叫了什麼。</div>';
+}
+
+// ============================================================
+// PART 6: SubcomposeLayout — 測量依賴解方
+// ============================================================
+function getPart6() {
+  var done = S.completedParts.includes(6);
+  var read = S.readParts.includes(6);
+
+  var h = '<div class="part-hdr"><span class="tag">Part 6</span><h1>📐 SubcomposeLayout — 測量依賴解方</h1>' +
+    '<p class="desc">當 content 需要知道 topBar 的高度來計算 padding，但兩者必須在同一個 Layout 中測量——SubcomposeLayout 就是解方。</p></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">問題：測量依賴</h3>' +
+    '<p style="margin-bottom:12px">Scaffold 的 <code>content</code> 需要接收 <code>PaddingValues</code>，其中 <code>top</code> 等於 topBar 的高度。但在普通 Layout 中，所有子元件是<strong>同時測量</strong>的——你不知道 topBar 多高就沒辦法計算 padding。</p>' +
+    '<div class="param-group param-behavior"><strong>普通 Layout</strong>：所有子元件一次測量 → 無法根據 A 的結果調整 B</div>' +
+    '<div class="param-group param-style"><strong>SubcomposeLayout</strong>：分批測量 → 先測量 A，再根據結果測量 B</div></div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">Scaffold 的 SubcomposeLayout 分批測量</h3>' +
+    codeBlock('SubcomposeLayout { constraints ->\\n    val layoutWidth = constraints.maxWidth\\n    val layoutHeight = constraints.maxHeight\\n    val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)\\n\\n    // 1. 先測量 topBar\\n    val topBarPlaceable = subcompose(\\n        ScaffoldLayoutContent.TopBar, topBarContent\\n    ).first().measure(looseConstraints)\\n\\n    // 2. 測量 fab 和 snackbar\\n    val fabPlaceable = subcompose(\\n        ScaffoldLayoutContent.Fab, fabContent\\n    ).first().measure(\\n        looseConstraints.offset(-leftInset - rightInset, -bottomInset)\\n    )\\n\\n    // 3. 測量 bottomBar\\n    val bottomBarPlaceable = subcompose(\\n        ScaffoldLayoutContent.BottomBar, bottomBarContent\\n    ).first().measure(looseConstraints)\\n\\n    // 4. 計算 contentPadding\\n    contentPadding.paddingHolder = PaddingValues(\\n        top = topBarPlaceable.height.toDp(),\\n        bottom = bottomBarPlaceable.height.toDp(),\\n    )\\n\\n    // 5. 最後測量 content\\n    val bodyContentPlaceable = subcompose(\\n        ScaffoldLayoutContent.MainContent, bodyContent\\n    ).first().measure(looseConstraints)\\n\\n    layout(layoutWidth, layoutHeight) {\\n        bodyContentPlaceable.place(0, 0)\\n        topBarPlaceable.place(0, 0)\\n        snackbarPlaceable.place(...)\\n        bottomBarPlaceable.place(\\n            0, layoutHeight - bottomBarPlaceable.height\\n        )\\n        fabPlacement?.let {\\n            fabPlaceable.place(\\n                it.left, layoutHeight - fabOffsetFromBottom!!\\n            )\\n        }\\n    }\\n}') +
+    '</div>';
+
+  h += '<div class="glass-card"><h3 style="margin-bottom:12px">分批測量流程</h3>' +
+    '<div class="layer-diagram">' +
+    '<div class="layer-box layer-api">Step 1：測量 topBar → 得到高度</div>' +
+    '<div class="layer-arrow">↓</div>' +
+    '<div class="layer-box layer-base">Step 2-3：測量 fab、snackbar、bottomBar</div>' +
+    '<div class="layer-arrow">↓</div>' +
+    '<div class="layer-box layer-api">Step 4：計算 PaddingValues（top = topBar高度, bottom = bottomBar高度）</div>' +
+    '<div class="layer-arrow">↓</div>' +
+    '<div class="layer-box layer-base">Step 5：用 PaddingValues 測量 content</div>' +
+    '<div class="layer-arrow">↓</div>' +
+    '<div class="layer-box layer-layout">Step 6：按繪製順序放置所有元件（z-index）</div>' +
+    '</div></div>';
+
+  h += insightBlock(6, '<code>subcompose()</code> 用 enum key（如 <code>ScaffoldLayoutContent.TopBar</code>）追蹤子元件。這讓 Compose 能在 Recomposition 時正確對應舊的子元件樹。繪製順序也有講究——<code>bodyContentPlaceable</code> 先 place 所以在最底層，<code>topBarPlaceable</code> 後 place 所以覆蓋在上面，這決定了 z-index。');
+
+  if (!read) h += '<div class="read-done"><button class="btn btn-sec" onclick="markRead(6)">✓ 我讀完了（+50 XP）</button></div>';
+  else h += '<div class="read-done done">✓ 已完成閱讀</div>';
+
+  var stepLabels = [
+    '測量 topBar',
+    '測量 snackbar 和 fab',
+    '測量 bottomBar',
+    '計算 contentPadding',
+    '測量 content',
+    '按繪製順序放置元件'
+  ];
+
+  h += '<div class="quiz-box"><h3>✅ 小測驗：Scaffold 測量步驟排序</h3>' +
+    '<p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">用 ▲ ▼ 按鈕把步驟排成正確的測量順序</p>';
+  S.part6Order.forEach(function(idx, pos) {
+    h += '<div class="sort-item"><span class="num">' + (pos + 1) + '</span><span class="text">' + stepLabels[idx] + '</span>' +
+      (!done ? '<button class="sort-btn" onclick="movePart6(' + pos + ',-1)">▲</button><button class="sort-btn" onclick="movePart6(' + pos + ',1)">▼</button>' : '') +
+      '</div>';
+  });
+  if (!done) h += '<button class="btn btn-pri" onclick="checkQuiz6()" style="margin-top:16px">確認順序</button>';
+  h += '<div id="quiz6-result"></div>';
+  if (done) h += '<div class="quiz-result pass">✅ 已通過！你已掌握 SubcomposeLayout 的測量流程。</div>';
+  h += '</div>';
+
+  h += briefCard(6, 'SubcomposeLayout', [
+    'SubcomposeLayout 解決「測量依賴」問題——先測量 A，再根據結果測量 B',
+    'Scaffold 分 6 步：topBar → fab/snackbar → bottomBar → padding → content → place',
+    'subcompose() 用 enum key 追蹤子元件，place 順序決定 z-index'
+  ], 'SubcomposeLayout 有效能代價嗎？', '有。subcompose() 每次都會重新組合子元件樹，比普通 Layout 更昂貴。所以只在真正需要「測量依賴」時才用——Scaffold 就是最典型的場景。');
+
+  return h;
+}
+
+function movePart6(pos, dir) {
+  var np = pos + dir;
+  if (np < 0 || np >= S.part6Order.length) return;
+  var tmp = S.part6Order[pos];
+  S.part6Order[pos] = S.part6Order[np];
+  S.part6Order[np] = tmp;
+  save(); render();
+}
+function checkQuiz6() {
+  var ok = S.part6Order.every(function(v, i) { return v === i; });
+  var el = document.getElementById('quiz6-result');
+  if (ok) { el.innerHTML = '<div class="quiz-result pass">🎉 排序正確！你掌握了 Scaffold 的完整測量流程。</div>'; completePart(6); }
+  else el.innerHTML = '<div class="quiz-result fail">❌ 順序不對。提示：先測量不依賴其他元件的部分（topBar），最後才測量需要 padding 的 content。</div>';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+var TOPIC_PARTS = [getPart1, getPart2, getPart3, getPart4, getPart5, getPart6];
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof LearningEngine !== 'undefined') {
+    LearningEngine.init(TOPIC_CONFIG, TOPIC_PARTS);
+  }
+});
+</script>
+</body>
+</html>
